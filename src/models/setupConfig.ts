@@ -45,6 +45,7 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     TELEGRAM_BOT_TOKEN: '',
     TELEGRAM_CHAT_ID: '',
     TELEGRAM_DAILY_REPORT_HOUR: '8',
+    TELEGRAM_CHAT_ID_CONTROL: '',
     TRADING_ENABLED: 'true',
 
     PM2_PROCESS_NAME: 'copy-bot-poly',
@@ -291,9 +292,8 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
         TELEGRAM_BOT_TOKEN: getCfg(m, 'TELEGRAM_BOT_TOKEN') ?? '',
         TELEGRAM_CHAT_ID: getCfg(m, 'TELEGRAM_CHAT_ID') ?? '',
         TELEGRAM_DAILY_REPORT_HOUR: parseIntSafe(getCfg(m, 'TELEGRAM_DAILY_REPORT_HOUR'), 8),
-
+        TELEGRAM_CHAT_ID_CONTROL: getCfg(m, 'TELEGRAM_CHAT_ID_CONTROL') ?? '',
         TRADING_ENABLED: parseBool(getCfg(m, 'TRADING_ENABLED'), true),
-
         PM2_PROCESS_NAME: getCfg(m, 'PM2_PROCESS_NAME') ?? 'copy-bot-poly',
     };
 };

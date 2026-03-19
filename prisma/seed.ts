@@ -37,6 +37,7 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     TELEGRAM_BOT_TOKEN: "",
     TELEGRAM_CHAT_ID: "",
     TELEGRAM_DAILY_REPORT_HOUR: "8",
+    TELEGRAM_CHAT_ID_CONTROL: "",
     TRADING_ENABLED: "true",
     PM2_PROCESS_NAME: "copy-bot-poly",
 };

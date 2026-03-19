@@ -59,9 +59,9 @@ declare global {
         TELEGRAM_PM2_PIN: string;
         TELEGRAM_BOT_TOKEN: string;
         TELEGRAM_CHAT_ID: string;
+        TELEGRAM_CHAT_ID_CONTROL: string;
         TELEGRAM_DAILY_REPORT_HOUR: number;
         TRADING_ENABLED: boolean;
-
         PM2_PROCESS_NAME: string;
     }
 

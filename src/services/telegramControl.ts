@@ -24,7 +24,7 @@ type TelegramUpdate = {
 };
 
 const BOT_TOKEN = ENV.TELEGRAM_BOT_TOKEN ?? '';
-const CHAT_ID = ENV.TELEGRAM_CHAT_ID ?? '';
+const TELEGRAM_CHAT_ID_CONTROL = ENV.TELEGRAM_CHAT_ID_CONTROL ?? '';
 const ENABLED = ENV.TELEGRAM_CONTROL_ENABLED === true;
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
@@ -33,11 +33,20 @@ const PM2_AUTH_TTL_MS = 30 * 60_000;
 
 let maintenanceRunning = false;
 
-const isAllowedChat = (chatId: number): boolean => {
-    if (!CHAT_ID) return false;
-    const configured = Number(CHAT_ID);
-    return Number.isFinite(configured) && configured === chatId;
-};
+const allowedChatIds = (() => {
+    const ids: number[] = [];
+    const primary = Number(TELEGRAM_CHAT_ID_CONTROL);
+    if (Number.isFinite(primary)) ids.push(primary);
+
+    for (const raw of ENV.TELEGRAM_ADMIN_CHAT_IDS ?? []) {
+        const n = Number(raw);
+        if (Number.isFinite(n)) ids.push(n);
+    }
+
+    return Array.from(new Set(ids));
+})();
+
+const isAllowedChat = (chatId: number): boolean => allowedChatIds.includes(chatId);
 
 const normalizeChatId = (raw: string): number | null => {
     const n = Number(raw);
@@ -49,7 +58,7 @@ const getAdminChatIds = (cfg: SetupConfig): number[] => {
         .map((s) => normalizeChatId(s))
         .filter((v): v is number => v !== null);
     if (ids.length > 0) return ids;
-    const fallback = normalizeChatId(cfg.TELEGRAM_CHAT_ID);
+    const fallback = normalizeChatId(cfg.TELEGRAM_CHAT_ID_CONTROL);
     return fallback === null ? [] : [fallback];
 };
 
@@ -713,7 +722,7 @@ const handleCallback = async (
 };
 
 export const startTelegramControl = (): (() => void) => {
-    if (!ENABLED || !BOT_TOKEN || !CHAT_ID) {
+    if (!ENABLED || !BOT_TOKEN || !TELEGRAM_CHAT_ID_CONTROL) {
         return () => { };
     }
 
@@ -744,13 +753,33 @@ export const startTelegramControl = (): (() => void) => {
                         await handleCallback(cb.message.chat.id, cb.message.message_id, cb.id, cb.data);
                     }
                 }
-            } catch {
+            } catch (e) {
+                if (axios.isAxiosError(e)) {
+                    const desc = (e.response?.data as { description?: string } | undefined)?.description;
+                    const msg = desc ?? e.message;
+                    if (typeof msg === 'string' && msg.toLowerCase().includes('webhook')) {
+                        console.warn(
+                            `[TelegramControl] getUpdates blocked by webhook. Run: curl -s "${API_BASE}/deleteWebhook"`
+                        );
+                    }
+                    if (typeof msg === 'string' && msg.toLowerCase().includes('conflict')) {
+                        console.warn(
+                            `[TelegramControl] getUpdates conflict (another instance running?): ${msg}`
+                        );
+                    }
+                }
                 await new Promise((r) => setTimeout(r, 2000));
             }
         }
     };
 
     loop().catch(() => { });
+
+    const primary = Number(TELEGRAM_CHAT_ID_CONTROL);
+    if (Number.isFinite(primary) && isAllowedChat(primary)) {
+        send(primary, '✅ Telegram control connected. Ketik <code>/menu</code> untuk mulai.').catch(() => { });
+    }
+
     return () => {
         running = false;
     };

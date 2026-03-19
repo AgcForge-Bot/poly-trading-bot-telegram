@@ -16,6 +16,7 @@ import {
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
 const COPY_STRATEGY_CONFIG = ENV.COPY_STRATEGY_CONFIG;
 const MAX_SLIPPAGE_PERCENT = ENV.MAX_SLIPPAGE_PERCENT;
+const OWN_CUSTOM_AMOUNT_USD = ENV.OWN_CUSTOM_AMOUNT_USD;
 
 const MIN_ORDER_USD_SIZE = 1.0;
 const MIN_ORDER_TOKEN_SIZE = 1.0;
@@ -198,7 +199,9 @@ const postOrder = async (
             return;
         }
 
-        let remaining = orderCalc.finalAmount,
+        const isOwnCustom = String((COPY_STRATEGY_CONFIG as unknown as { strategy?: unknown })?.strategy) === 'OWN_CUSTOM';
+
+        let remaining = isOwnCustom ? Math.min(orderCalc.finalAmount, OWN_CUSTOM_AMOUNT_USD) : orderCalc.finalAmount,
             retry = 0;
         let abortDueToFunds = false,
             totalBoughtTokens = 0;

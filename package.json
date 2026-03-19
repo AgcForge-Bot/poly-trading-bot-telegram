@@ -51,12 +51,14 @@
     "ethers": "^5.8.0",
     "keccak256-helper": "0.0.1-security",
     "moment": "^2.30.1",
+    "node-telegram-bot-api": "^0.67.0",
     "ora": "^9.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.5.0",
+    "@types/node-telegram-bot-api": "^0.64.14",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "eslint": "^10.0.3",
