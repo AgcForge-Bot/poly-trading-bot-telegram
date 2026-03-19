@@ -27,9 +27,9 @@ else
 fi
 
 # ─── STEP 3: Buat log directory dengan permission yang benar ─────────────────
-sudo mkdir -p /var/log/polymarket-bot
-sudo chown -R $USER:$USER /var/log/polymarket-bot
-sudo chmod 755 /var/log/polymarket-bot
+sudo mkdir -p /var/log/poly-trading-bot-telegram
+sudo chown -R $USER:$USER /var/log/poly-trading-bot-telegram
+sudo chmod 755 /var/log/poly-trading-bot-telegram
 
 # ─── STEP 4: Clone / upload project ke server ────────────────────────────────
 # Opsi A — Git clone (jika pakai git)
@@ -38,7 +38,7 @@ sudo chmod 755 /var/log/polymarket-bot
 # Opsi B — SCP dari local machine
 # scp -r ./polymarket-bot ubuntu@YOUR_SERVER_IP:/home/ubuntu/
 
-cd /var/www/bot/polymarket-copy-trading-bot
+cd /var/www/poly-trading-bot-telegram
 
 # ─── STEP 5: Buat file .env dengan secrets ───────────────────────────────────
 # JANGAN copy secrets ke ecosystem.config.cjs — taruh di sini saja
@@ -66,7 +66,7 @@ pm2 start ecosystem.config.cjs
 
 # Cek status
 pm2 status
-pm2 logs polymarket-copy-bot --lines 50
+pm2 logs poly-trading-bot-telegram --lines 50
 
 # ─── STEP 8: Setup auto-start saat server reboot ─────────────────────────────
 pm2 save                    # simpan daftar process yang sedang jalan
@@ -80,7 +80,7 @@ pm2 startup                 # PM2 akan print satu perintah sudo — COPY dan JAL
 # sudo reboot
 # # setelah reboot:
 # pm2 status    # harus muncul 'online'
-# pm2 logs polymarket-copy-bot --lines 20
+# pm2 logs poly-trading-bot-telegram --lines 20
 
 # ─── Perintah PM2 yang sering dipakai ────────────────────────────────────────
 
@@ -88,31 +88,31 @@ pm2 startup                 # PM2 akan print satu perintah sudo — COPY dan JAL
 pm2 status
 
 # Lihat log live (streaming)
-pm2 logs polymarket-copy-bot
+pm2 logs poly-trading-bot-telegram
 
 # Lihat hanya error log
-pm2 logs polymarket-copy-bot --err
+pm2 logs poly-trading-bot-telegram --err
 
 # Restart bot (setelah update code)
-npm run build && pm2 restart polymarket-copy-bot
+npm run build && pm2 restart poly-trading-bot-telegram
 
 # Stop bot
-pm2 stop polymarket-copy-bot
+pm2 stop poly-trading-bot-telegram
 
 # Hapus process dari PM2
-pm2 delete polymarket-copy-bot
+pm2 delete poly-trading-bot-telegram
 
 # Monitor resource usage (CPU/RAM)
 pm2 monit
 
 # Flush log files (bersihkan log lama)
-pm2 flush polymarket-copy-bot
+pm2 flush poly-trading-bot-telegram
 
 # ─── Logrotate setup (opsional tapi recommended) ─────────────────────────────
 # Agar log tidak membesar tanpa batas:
 
 sudo tee /etc/logrotate.d/polymarket-bot << 'LOGROTATE'
-/var/log/polymarket-bot/*.log {
+/var/log/poly-trading-bot-telegram/*.log {
     daily
     rotate 14
     compress

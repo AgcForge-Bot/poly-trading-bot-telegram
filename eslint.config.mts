@@ -32,7 +32,8 @@ export default tseslint.config(
       "no-case-declarations": "off",
       "no-control-regex": "off",
       "no-unused-vars": "off",
-      "preserve-caught-error": "off"
+      "preserve-caught-error": "off",
+      "no-useless-assignment": "off",
     },
   },
 );

@@ -4,14 +4,34 @@
   "description": "Trading bot for copy trading on Polygon",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
     "start": "node dist/index.js",
-    "dev": "ts-node-esm src/index.ts",
+    "dev": "node --experimental-specifier-resolution=node --loader ts-node/esm src/index.ts",
+    "help": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/help.ts",
+    "check-allowance": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkAllowance.ts",
+    "manual-sell": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/manualSell.ts",
+    "fetch-history": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/fetchHistoricalTrades.ts",
+    "check-activity": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkRecentActivity.ts",
+    "check-stats": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkMyStats.ts",
+    "check-pnl": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkPnLDiscrepancy.ts",
+    "check-proxy": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkProxyWallet.ts",
+    "check-both": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/checkBothWallets.ts",
+    "find-traders": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findBestTraders.ts",
+    "find-low-risk": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findLowRiskTraders.ts",
+    "compare": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/compareResults.ts",
+    "aggregate": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/aggregateResults.ts",
+    "audit": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/auditCopyTradingAlgorithmFixed.ts",
+    "audit-old": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/auditCopyTradingAlgorithm.ts",
+    "health-check": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/healthCheck.ts",
+    "compute-gnosis-safe": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/computeGnosisSafeAddress.ts",
+    "find-gnosis-safe": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findGnosisSafeProxy.ts",
+    "find-my-eoa": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findMyEOA.ts",
+    "find-real-proxy": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findRealProxyWallet.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "prisma db seed"
   },
   "type": "module",
   "keywords": [],
@@ -52,6 +72,6 @@
     "typescript-eslint": "^8.57.1"
   },
   "prisma": {
-    "seed": "ts-node-esm prisma/seed.ts"
+    "seed": "node --experimental-specifier-resolution=node --loader ts-node/esm prisma/seed.ts"
   }
 }

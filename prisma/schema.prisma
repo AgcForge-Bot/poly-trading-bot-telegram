@@ -42,6 +42,11 @@ model UserPositions {
   created_at         DateTime  @default(now()) @db.Timestamptz
   updated_at         DateTime  @updatedAt @db.Timestamptz
 
+  @@index([title], name: "idx_userPositions_title")
+  @@index([slug], name: "idx_userPositions_slug")
+  @@index([assets], name: "idx_assets")
+  @@index([proxyWallet], name: "idx_userPositions_proxyWallet")
+  @@index([conditionId], map: "idx_userPositions_conditionId")
   @@index([initialValue], name: "idx_initialValue")
   @@index([currentValue], name: "idx_currentValue")
   @@index([outcomeIndex], name: "idx_outcomeIndex")

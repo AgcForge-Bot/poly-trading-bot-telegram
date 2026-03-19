@@ -45,7 +45,7 @@
     "allowUnreachableCode": false
   },
   "include": ["src/**/*", "types/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"],
+  "exclude": ["node_modules", "dist", "src/scripts/**", "**/*.test.ts", "**/*.spec.ts"],
   "ts-node": {
     "esm": true,
     "transpileOnly": true

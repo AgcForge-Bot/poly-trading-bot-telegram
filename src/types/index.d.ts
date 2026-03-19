@@ -1,6 +1,14 @@
+import type { UserActivities, UserPositions } from "./prisma/client";
+
 export { };
 
 declare global {
+    const enum CopyStrategy {
+        PERCENTAGE = "PERCENTAGE",
+        FIXED = "FIXED",
+        ADAPTIVE = "ADAPTIVE",
+        OWN_CUSTOM = "OWN_CUSTOM",
+    }
     interface SetupConfig {
         USER_ADDRESSES: string[];
         PROXY_WALLET: string;
@@ -23,6 +31,7 @@ declare global {
         TRADE_AGGREGATION_ENABLED: boolean;
         TRADE_AGGREGATION_WINDOW_SECONDS: number;
         MAX_SLIPPAGE_PERCENT: number;
+        OWN_CUSTOM_AMOUNT_USD: number;
         ADAPTIVE_MIN_PERCENT: number;
         ADAPTIVE_MAX_PERCENT: number;
         ADAPTIVE_THRESHOLD_USD: number;
@@ -44,9 +53,16 @@ declare global {
         LEADERBOARD_SCORER: leaderboardScored;
         LEADERBOARD_FILTER: leaderboardFilter;
         TELEGRAM_NOTIFICATIONS_ENABLED: boolean;
+        TELEGRAM_CONTROL_ENABLED: boolean;
+        TELEGRAM_PM2_CONTROL_ENABLED: boolean;
+        TELEGRAM_ADMIN_CHAT_IDS: string[];
+        TELEGRAM_PM2_PIN: string;
         TELEGRAM_BOT_TOKEN: string;
         TELEGRAM_CHAT_ID: string;
         TELEGRAM_DAILY_REPORT_HOUR: number;
+        TRADING_ENABLED: boolean;
+
+        PM2_PROCESS_NAME: string;
     }
 
     interface leaderboardScored {
@@ -60,13 +76,6 @@ declare global {
         minProfitUSD: number;
         minVolumeUSD: number;
         minWinRate: number;
-    }
-
-
-    const enum CopyStrategy {
-        PERCENTAGE = "PERCENTAGE",
-        FIXED = "FIXED",
-        ADAPTIVE = "ADAPTIVE",
     }
     /**
      * Tier definition for tiered multipliers
@@ -87,7 +96,11 @@ declare global {
         // PERCENTAGE: Percentage of trader's order (e.g., 10.0 = 10%)
         // FIXED: Fixed dollar amount per trade (e.g., 50.0 = $50)
         // ADAPTIVE: Base percentage for adaptive scaling
+        // OWN_CUSTOM: Custom USD amount per trade
         copySize: number;
+
+        // Only used if strategy = OWN_CUSTOM
+        ownCustomAmountUSD?: number;
 
         // Adaptive strategy parameters (only used if strategy = ADAPTIVE)
         adaptiveMinPercent?: number; // Minimum percentage for large orders
@@ -143,7 +156,35 @@ declare global {
         metadata: { address: string; userName?: string; pnl: number; vol: number; score: number }[];
     }
 
+    interface TradeWithUser extends UserActivities {
+        userAddress: string;
+    }
 
+    interface AggregatedTrade {
+        userAddress: string;
+        conditionId: string;
+        asset: string;
+        side: string;
+        slug?: string;
+        eventSlug?: string;
+        trades: TradeWithUser[];
+        totalUsdcSize: number;
+        averagePrice: number;
+        firstTradeTime: number;
+        lastTradeTime: number;
+    }
+
+    interface TradeContext {
+        my_positions: UserPositions[];
+        user_positions: UserPositions[];
+        my_position: UserPositions | undefined;
+        user_position: UserPositions | undefined;
+        my_balance: number;
+        user_balance: number;
+    }
+
+
+    /// Notification levels for Telegram
     type NotifLevel = 'error' | 'warning' | 'info' | 'success';
 
     interface TelegramPayload {
@@ -181,6 +222,8 @@ declare global {
         isFullClose: boolean; // true = closed entire position
     }
 
+    /// Daily report database stats
+
     interface DailyReportStats {
         date: string; // "2025-01-01"
         totalTrades: number;
@@ -192,7 +235,6 @@ declare global {
         openPositions: number;
     }
 
-    /// Daily report database stats
     type DailyReportDbStats = {
         totalTrades: number;
         winTrades: number;
@@ -219,6 +261,279 @@ declare global {
         count: number;
         addresses: string[];
         metadata: { address: string; userName?: string; pnl: number; vol: number; score: number }[];
+    }
+
+    // Agregate Results 
+
+    interface TraderResult {
+        address: string;
+        roi: number;
+        totalPnl: number;
+        winRate: number;
+        copiedTrades: number;
+        status?: string;
+    }
+
+    interface ScanResult {
+        scanDate: string;
+        config: {
+            historyDays: number;
+            multiplier: number;
+            minOrderSize: number;
+            startingCapital: number;
+        };
+        summary?: {
+            totalAnalyzed: number;
+            profitable: number;
+            avgROI: number;
+            avgWinRate: number;
+        };
+        traders: TraderResult[];
+    }
+
+    interface AnalysisResult {
+        timestamp: number;
+        traderAddress: string;
+        config: {
+            historyDays: number;
+            multiplier: number;
+            minOrderSize: number;
+            startingCapital: number;
+        };
+        results: {
+            address: string;
+            roi: number;
+            totalPnl: number;
+            winRate: number;
+            copiedTrades: number;
+        }[];
+    }
+
+    interface StrategyPerformance {
+        strategyId: string;
+        historyDays: number;
+        multiplier: number;
+        bestROI: number;
+        bestWinRate: number;
+        bestPnL: number;
+        avgROI: number;
+        avgWinRate: number;
+        tradersAnalyzed: number;
+        profitableTraders: number;
+        filesCount: number;
+    }
+
+    // Audit copy Trade algorithm
+    interface Trade {
+        id: string;
+        timestamp: number;
+        market: string;
+        asset: string;
+        side: 'BUY' | 'SELL';
+        price: number;
+        usdcSize: number;
+        size: number;
+        outcome: string;
+    }
+
+    interface Position {
+        asset: string;
+        size: number;
+        currentValue: number;
+    }
+
+    interface SimulatedPosition {
+        market: string;
+        outcome: string;
+        entryPrice: number;
+        exitPrice: number | null;
+        invested: number;
+        currentValue: number;
+        pnl: number;
+        closed: boolean;
+        trades: {
+            timestamp: number;
+            side: 'BUY' | 'SELL';
+            price: number;
+            size: number;
+            usdcSize: number;
+            traderPercent: number;
+            yourSize: number;
+        }[];
+    }
+
+    interface TraderAuditResult {
+        address: string;
+        shortAddress: string;
+        startingCapital: number;
+        currentCapital: number;
+        totalTrades: number;
+        copiedTrades: number;
+        skippedTrades: number;
+        totalPnl: number;
+        roi: number;
+        realizedPnl: number;
+        unrealizedPnl: number;
+        winRate: number;
+        avgTradeSize: number;
+        openPositions: number;
+        closedPositions: number;
+        simulationTime: number;
+        trades: Trade[];
+        positions: Map<string, SimulatedPosition>;
+        error?: string;
+    }
+
+    interface CombinedBotResult {
+        startingCapital: number;
+        currentCapital: number;
+        totalPnl: number;
+        roi: number;
+        realizedPnl: number;
+        unrealizedPnl: number;
+        totalTrades: number;
+        copiedTrades: number;
+        skippedTrades: number;
+        openPositions: number;
+        closedPositions: number;
+        winRate: number;
+        capitalPerTrader: number;
+    }
+
+    interface AuditReport {
+        timestamp: string;
+        config: {
+            traders: string[];
+            days: number;
+            multiplier: number;
+            startingCapital: number;
+            minOrderSize: number;
+            capitalPerTrader: number;
+        };
+        individualResults: TraderAuditResult[];
+        combinedResult: CombinedBotResult;
+        analysis: {
+            totalProfit: number;
+            totalROI: number;
+            bestTrader: string;
+            worstTrader: string;
+            avgWinRate: number;
+            diversificationBenefit: number; // Combined ROI vs average individual ROI
+            expectedCombinedROI: number; // Mathematical expectation
+            actualCombinedROI: number; // Actual result
+            roiDeviation: number; // Difference between expected and actual
+        };
+    }
+
+    // Audit Copy Trade Algorithm Fixed
+
+    interface Trade {
+        id: string;
+        timestamp: number;
+        market: string;
+        asset: string;
+        side: 'BUY' | 'SELL';
+        price: number;
+        usdcSize: number;
+        size: number;
+        outcome: string;
+    }
+
+    interface Position {
+        asset: string;
+        size: number;
+        currentValue: number;
+    }
+
+    interface SimulatedPosition {
+        market: string;
+        outcome: string;
+        entryPrice: number;
+        exitPrice: number | null;
+        invested: number;
+        currentValue: number;
+        pnl: number;
+        closed: boolean;
+        sharesHeld: number; // Track actual shares
+        trades: TradeSimulatedPosition[];
+    }
+
+    interface TradeSimulatedPosition {
+        timestamp: number;
+        side: 'BUY' | 'SELL';
+        price: number;
+        size: number;
+        usdcSize: number;
+        traderSize: number;
+        yourSize: number;
+    }
+
+    interface TraderAuditResult {
+        address: string;
+        shortAddress: string;
+        startingCapital: number;
+        currentCapital: number;
+        totalTrades: number;
+        copiedTrades: number;
+        skippedTrades: number;
+        totalPnl: number;
+        roi: number;
+        realizedPnl: number;
+        unrealizedPnl: number;
+        winRate: number;
+        avgTradeSize: number;
+        openPositions: number;
+        closedPositions: number;
+        simulationTime: number;
+        trades: Trade[];
+        positions: Map<string, SimulatedPosition>;
+        error?: string;
+    }
+
+    interface CombinedBotResult {
+        startingCapital: number;
+        currentCapital: number;
+        totalPnl: number;
+        roi: number;
+        realizedPnl: number;
+        unrealizedPnl: number;
+        totalTrades: number;
+        copiedTrades: number;
+        skippedTrades: number;
+        openPositions: number;
+        closedPositions: number;
+        winRate: number;
+        capitalPerTrader: number;
+    }
+
+    interface AuditReport {
+        timestamp: string;
+        config: AuditReportConfig;
+        individualResults: TraderAuditResult[];
+        combinedResult: CombinedBotResult;
+        analysis: AuditReportAnalytics;
+    }
+
+    interface AuditReportConfig {
+        traders: string[];
+        days: number;
+        multiplier: number;
+        startingCapital: number;
+        minOrderSize: number;
+        capitalPerTrader: number;
+        copyPercentage: number; // NEW: Fixed percentage to copy
+    }
+
+    interface AuditReportAnalytics {
+        totalProfit: number;
+        totalROI: number;
+        bestTrader: string;
+        worstTrader: string;
+        avgWinRate: number;
+        diversificationBenefit: number;
+        expectedCombinedROI: number;
+        actualCombinedROI: number;
+        roiDeviation: number;
     }
 
 }

@@ -1,0 +1,89 @@
+{
+  "updatedAt": "2026-03-19T20:26:52.326Z",
+  "timePeriod": "DAY",
+  "count": 10,
+  "addresses": [
+    "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
+    "0x07bdcabf60da99be8fad11092bf4e8412cffe993",
+    "0xd1be0932c621cc31edb32eae5cc7e8394faccc57",
+    "0x37c1874a60d348903594a96703e0507c518fc53a",
+    "0x492442eab586f242b53bda933fd5de859c8a3782",
+    "0xd9c4f7323b02bcb3e476291e9203239667006f95",
+    "0x07b8e44b90cc3e91b8d5fe60ea810d2534638e25",
+    "0xee613b3fc183ee44f9da9c05f53e2da107e3debf",
+    "0x2005d16a84ceefa912d4e380cd32e7ff827875ea",
+    "0x3b5c629f114098b0dee345fb78b7a3a013c7126e"
+  ],
+  "metadata": [
+    {
+      "address": "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
+      "userName": "0x2a2C53bD278c04DA9962Fcf96490E17F3DfB9Bc1-1772479215461",
+      "pnl": 489428.4179181705,
+      "vol": 13856518.270379,
+      "score": 0.8500000000000001
+    },
+    {
+      "address": "0x07bdcabf60da99be8fad11092bf4e8412cffe993",
+      "userName": "imnotawizard",
+      "pnl": 471568.864418993,
+      "vol": 1196468.9837540002,
+      "score": 0.606990499830961
+    },
+    {
+      "address": "0xd1be0932c621cc31edb32eae5cc7e8394faccc57",
+      "userName": "smoothmove",
+      "pnl": 433198.88594247703,
+      "vol": 2513727.593158,
+      "score": 0.5993975344467715
+    },
+    {
+      "address": "0x37c1874a60d348903594a96703e0507c518fc53a",
+      "userName": "CemeterySun",
+      "pnl": 230582.64157364913,
+      "vol": 2699117.3833159995,
+      "score": 0.4371481659344527
+    },
+    {
+      "address": "0x492442eab586f242b53bda933fd5de859c8a3782",
+      "userName": "0x492442EaB586F242B53bDa933fD5dE859c8A3782-1766317541188",
+      "pnl": 258053.47038362548,
+      "vol": 399727.085135,
+      "score": 0.41811380620005406
+    },
+    {
+      "address": "0xd9c4f7323b02bcb3e476291e9203239667006f95",
+      "userName": "MildredBK",
+      "pnl": 207376.06872045324,
+      "vol": 507547.974808,
+      "score": 0.3786414952296588
+    },
+    {
+      "address": "0x07b8e44b90cc3e91b8d5fe60ea810d2534638e25",
+      "userName": "joosangyoo",
+      "pnl": 150333.8393178353,
+      "vol": 2604596.333706,
+      "score": 0.36985708070365975
+    },
+    {
+      "address": "0xee613b3fc183ee44f9da9c05f53e2da107e3debf",
+      "userName": "sovereign2013",
+      "pnl": 130377.36026083957,
+      "vol": 3418960.839944001,
+      "score": 0.36823985724687824
+    },
+    {
+      "address": "0x2005d16a84ceefa912d4e380cd32e7ff827875ea",
+      "userName": "RN1",
+      "pnl": 89702.6153477002,
+      "vol": 4598886.542032,
+      "score": 0.3562854853942133
+    },
+    {
+      "address": "0x3b5c629f114098b0dee345fb78b7a3a013c7126e",
+      "userName": "SMCAOMCRL",
+      "pnl": 128286.68443374464,
+      "vol": 2004095.1025620003,
+      "score": 0.34100411111139206
+    }
+  ]
+}

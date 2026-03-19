@@ -22,6 +22,7 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     TRADE_AGGREGATION_ENABLED: 'false',
     TRADE_AGGREGATION_WINDOW_SECONDS: '300',
     MAX_SLIPPAGE_PERCENT: '15',
+    OWN_CUSTOM_AMOUNT_USD: '1.0',
     ADAPTIVE_MIN_PERCENT: '5.0',
     ADAPTIVE_MAX_PERCENT: '20.0',
     ADAPTIVE_THRESHOLD_USD: '500.0',
@@ -37,9 +38,16 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     LEADERBOARD_SCORE_WEIGHT_ACTIVITY: '0.20',
     LEADERBOARD_SCORE_WEIGHT_WINRATE: '0.00',
     TELEGRAM_NOTIFICATIONS_ENABLED: 'false',
+    TELEGRAM_CONTROL_ENABLED: 'false',
+    TELEGRAM_PM2_CONTROL_ENABLED: 'false',
+    TELEGRAM_ADMIN_CHAT_IDS: '[]',
+    TELEGRAM_PM2_PIN: '',
     TELEGRAM_BOT_TOKEN: '',
     TELEGRAM_CHAT_ID: '',
     TELEGRAM_DAILY_REPORT_HOUR: '8',
+    TRADING_ENABLED: 'true',
+
+    PM2_PROCESS_NAME: 'copy-bot-poly',
 };
 
 const parseNumber = (raw: string | undefined, fallback: number): number => {
@@ -81,6 +89,28 @@ const parseUserAddresses = (input: string | undefined): string[] => {
         .filter(Boolean);
 };
 
+const parseStringList = (input: string | undefined): string[] => {
+    if (!input) return [];
+    const trimmed = input.trim();
+    if (trimmed.length === 0) return [];
+
+    if (trimmed.startsWith('[')) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+                return parsed.map((v) => String(v).trim()).filter(Boolean);
+            }
+        } catch {
+            return [];
+        }
+    }
+
+    return trimmed
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+};
+
 const buildConfigMap = (rows: ConfigRow[]): Map<string, string> => {
     const sorted = [...rows].sort((a, b) => {
         const ta = a.updated_at?.getTime() ?? 0;
@@ -96,19 +126,31 @@ const getCfg = (m: Map<string, string>, key: string): string | undefined => {
 
 const parseCopyStrategyConfig = (m: Map<string, string>): CopyStrategyConfig => {
     const copyStrategyRaw = (getCfg(m, 'COPY_STRATEGY') ?? 'PERCENTAGE').toUpperCase();
-    const strategy =
+    const strategyKey: 'PERCENTAGE' | 'FIXED' | 'ADAPTIVE' | 'OWN_CUSTOM' =
         copyStrategyRaw === 'ADAPTIVE'
-            ? CopyStrategy.ADAPTIVE
+            ? 'ADAPTIVE'
             : copyStrategyRaw === 'FIXED'
-                ? CopyStrategy.FIXED
-                : CopyStrategy.PERCENTAGE;
+                ? 'FIXED'
+                : copyStrategyRaw === 'OWN_CUSTOM'
+                    ? 'OWN_CUSTOM'
+                    : 'PERCENTAGE';
+    const strategy = strategyKey as unknown as CopyStrategy;
+
+    const ownCustomAmountUSD = parseNumber(getCfg(m, 'OWN_CUSTOM_AMOUNT_USD'), 1.0);
 
     const base: CopyStrategyConfig = {
         strategy,
-        copySize: parseNumber(getCfg(m, 'COPY_SIZE'), 10.0),
+        copySize:
+            strategyKey === 'OWN_CUSTOM'
+                ? ownCustomAmountUSD
+                : parseNumber(getCfg(m, 'COPY_SIZE'), 10.0),
         maxOrderSizeUSD: parseNumber(getCfg(m, 'MAX_ORDER_SIZE_USD'), 100.0),
         minOrderSizeUSD: parseNumber(getCfg(m, 'MIN_ORDER_SIZE_USD'), 1.0),
     };
+
+    if (strategyKey === 'OWN_CUSTOM') {
+        base.ownCustomAmountUSD = ownCustomAmountUSD;
+    }
 
     const maxPosition = parseNumber(getCfg(m, 'MAX_POSITION_SIZE_USD'), 0);
     if (maxPosition > 0) base.maxPositionSizeUSD = maxPosition;
@@ -124,7 +166,7 @@ const parseCopyStrategyConfig = (m: Map<string, string>): CopyStrategyConfig => 
         if (tradeMultiplier !== 1.0) base.tradeMultiplier = tradeMultiplier;
     }
 
-    if (strategy === CopyStrategy.ADAPTIVE) {
+    if (strategyKey === 'ADAPTIVE') {
         base.adaptiveMinPercent = parseNumber(getCfg(m, 'ADAPTIVE_MIN_PERCENT'), base.copySize);
         base.adaptiveMaxPercent = parseNumber(getCfg(m, 'ADAPTIVE_MAX_PERCENT'), base.copySize);
         base.adaptiveThreshold = parseNumber(getCfg(m, 'ADAPTIVE_THRESHOLD_USD'), 500);
@@ -173,6 +215,7 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
 
     const userAddresses = parseUserAddresses(getCfg(m, 'USER_ADDRESSES'));
     const maxSlippagePercent = parseNumber(getCfg(m, 'MAX_SLIPPAGE_PERCENT'), 15) / 100;
+    const ownCustomAmountUSD = parseNumber(getCfg(m, 'OWN_CUSTOM_AMOUNT_USD'), 1.0);
     const adaptiveMin = parseNumber(getCfg(m, 'ADAPTIVE_MIN_PERCENT'), 5.0);
     const adaptiveMax = parseNumber(getCfg(m, 'ADAPTIVE_MAX_PERCENT'), 20.0);
     const adaptiveThreshold = parseNumber(getCfg(m, 'ADAPTIVE_THRESHOLD_USD'), 500.0);
@@ -210,6 +253,7 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
         TRADE_AGGREGATION_ENABLED: parseBool(getCfg(m, 'TRADE_AGGREGATION_ENABLED'), false),
         TRADE_AGGREGATION_WINDOW_SECONDS: parseIntSafe(getCfg(m, 'TRADE_AGGREGATION_WINDOW_SECONDS'), 300),
         MAX_SLIPPAGE_PERCENT: maxSlippagePercent,
+        OWN_CUSTOM_AMOUNT_USD: ownCustomAmountUSD,
         ADAPTIVE_MIN_PERCENT: adaptiveMin,
         ADAPTIVE_MAX_PERCENT: adaptiveMax,
         ADAPTIVE_THRESHOLD_USD: adaptiveThreshold,
@@ -240,8 +284,16 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
             minWinRate: parseNumber(getCfg(m, 'LEADERBOARD_MIN_WIN_RATE'), 0),
         } as SetupConfig['LEADERBOARD_FILTER'],
         TELEGRAM_NOTIFICATIONS_ENABLED: parseBool(getCfg(m, 'TELEGRAM_NOTIFICATIONS_ENABLED'), false),
+        TELEGRAM_CONTROL_ENABLED: parseBool(getCfg(m, 'TELEGRAM_CONTROL_ENABLED'), false),
+        TELEGRAM_PM2_CONTROL_ENABLED: parseBool(getCfg(m, 'TELEGRAM_PM2_CONTROL_ENABLED'), false),
+        TELEGRAM_ADMIN_CHAT_IDS: parseStringList(getCfg(m, 'TELEGRAM_ADMIN_CHAT_IDS')),
+        TELEGRAM_PM2_PIN: getCfg(m, 'TELEGRAM_PM2_PIN') ?? '',
         TELEGRAM_BOT_TOKEN: getCfg(m, 'TELEGRAM_BOT_TOKEN') ?? '',
         TELEGRAM_CHAT_ID: getCfg(m, 'TELEGRAM_CHAT_ID') ?? '',
         TELEGRAM_DAILY_REPORT_HOUR: parseIntSafe(getCfg(m, 'TELEGRAM_DAILY_REPORT_HOUR'), 8),
+
+        TRADING_ENABLED: parseBool(getCfg(m, 'TRADING_ENABLED'), true),
+
+        PM2_PROCESS_NAME: getCfg(m, 'PM2_PROCESS_NAME') ?? 'copy-bot-poly',
     };
 };

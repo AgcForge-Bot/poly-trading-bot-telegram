@@ -119,3 +119,25 @@ export const performHealthCheck = async (): Promise<HealthCheckResult> => {
         timestamp: Date.now(),
     };
 };
+
+/**
+ * Log health check results
+ */
+export const logHealthCheck = (result: HealthCheckResult): void => {
+    Logger.separator();
+    Logger.header('🏥 HEALTH CHECK');
+    Logger.info(`Overall Status: ${result.healthy ? '✅ Healthy' : '❌ Unhealthy'}`);
+    Logger.info(
+        `Database: ${result.checks.database.status === 'ok' ? '✅' : '❌'} ${result.checks.database.message}`
+    );
+    Logger.info(
+        `RPC: ${result.checks.rpc.status === 'ok' ? '✅' : '❌'} ${result.checks.rpc.message}`
+    );
+    Logger.info(
+        `Balance: ${result.checks.balance.status === 'ok' ? '✅' : result.checks.balance.status === 'warning' ? '⚠️' : '❌'} ${result.checks.balance.message}`
+    );
+    Logger.info(
+        `Polymarket API: ${result.checks.polymarketApi.status === 'ok' ? '✅' : '❌'} ${result.checks.polymarketApi.message}`
+    );
+    Logger.separator();
+};

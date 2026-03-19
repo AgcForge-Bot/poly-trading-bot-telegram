@@ -19,12 +19,16 @@ jobs:
         script: |
           set -e
 
-          cd /var/www/bot/polymarket-copy-trading-bot
+          cd /var/www/bot/poly-trading-bot-telegram
 
           echo "Pulling latest code..."
 
-          git remote set-url origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git fetch origin main
           git reset --hard origin/main
 
-          pm2 restart polymarket-copy-bot
+          # echo "Installing dependencies..."
+          # npm install
+          # npm run build
+
+          # echo "Restarting bot..."
+          # pm2 restart copy-bot-poly

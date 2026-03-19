@@ -9,6 +9,7 @@ export function calculateOrderSize(
 ): OrderSizeCalculation {
     let baseAmount: number;
     let reasoning: string;
+    const isOwnCustom = config.strategy === CopyStrategy.OWN_CUSTOM;
 
     // Step 1: Calculate base amount based on strategy
     switch (config.strategy) {
@@ -28,12 +29,17 @@ export function calculateOrderSize(
             reasoning = `Adaptive ${adaptivePercent.toFixed(1)}% of trader's $${traderOrderSize.toFixed(2)} = $${baseAmount.toFixed(2)}`;
             break;
 
+        case CopyStrategy.OWN_CUSTOM:
+            baseAmount = config.ownCustomAmountUSD ?? config.copySize;
+            reasoning = `OWN_CUSTOM fixed amount: $${baseAmount.toFixed(2)}`;
+            break;
+
         default:
             throw new Error(`Unknown strategy: ${config.strategy}`);
     }
 
     // Step 1.5: Apply tiered or single multiplier based on trader's order size
-    const multiplier = getTradeMultiplier(config, traderOrderSize);
+    const multiplier = isOwnCustom ? 1.0 : getTradeMultiplier(config, traderOrderSize);
     let finalAmount = baseAmount * multiplier;
 
     if (multiplier !== 1.0) {
