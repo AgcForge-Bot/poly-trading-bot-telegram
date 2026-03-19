@@ -1,0 +1,30 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script_stop: true
+        script: |
+          set -e
+
+          cd /var/www/bot/polymarket-copy-trading-bot
+
+          echo "Pulling latest code..."
+
+          git remote set-url origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git fetch origin main
+          git reset --hard origin/main
+
+          pm2 restart polymarket-copy-bot

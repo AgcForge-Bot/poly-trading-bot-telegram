@@ -1,0 +1,95 @@
+// https://www.prisma.io/docs/prisma-postgres/quickstart/prisma-orm
+// https://www.prisma.io/docs/accelerate/getting-started
+
+generator client {
+  provider      = "prisma-client"
+  output        = "../src/types/prisma"
+  moduleFormat  = "esm"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "rhel-openssl-1.0.x", "debian-openssl-3.0.x", "darwin-arm64", "windows", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserPositions {
+  id                 String    @id @default(cuid())
+  title              String?   @db.Text
+  slug               String?   @db.Text
+  icon               String?   @db.Text
+  proxyWallet        String?   @db.Text
+  assets             String?   @db.Text
+  conditionId        String?   @db.Text
+  size               Float?
+  avgPrice           Float?
+  initialValue       Float?
+  currentValue       Float?
+  cashPnl            Float?
+  percentPnl         Float?
+  totalBought        Float?
+  realizedPnl        Float?
+  percentRealizedPnl Float?
+  curPrice           Float?
+  redeemable         Boolean   @default(false)
+  mergeable          Boolean   @default(false)
+  eventSlug          String?   @db.Text
+  outcome            String?   @db.Text
+  outcomeIndex       Int?
+  oppositeOutcome    String?   @db.Text
+  oppositeAsset      String?   @db.Text
+  endDate            DateTime?
+  negativeRisk       Boolean   @default(false)
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  updated_at         DateTime  @updatedAt @db.Timestamptz
+
+  @@index([initialValue], name: "idx_initialValue")
+  @@index([currentValue], name: "idx_currentValue")
+  @@index([outcomeIndex], name: "idx_outcomeIndex")
+  @@map("user_positions")
+}
+
+model UserActivities {
+  id                    String   @id @default(cuid())
+  title                 String?  @db.Text
+  slug                  String?  @db.Text
+  icon                  String?  @db.Text
+  name                  String?  @db.Text
+  eventSlug             String?  @db.Text
+  proxyWallet           String?  @db.Text
+  conditionId           String?  @db.Text
+  type                  String?  @db.Text
+  size                  Float?
+  usdcSize              Float?
+  transactionHash       String?  @db.Text
+  price                 Float?
+  asset                 String?  @db.Text
+  side                  String?  @db.Text
+  outcomeIndex          Int?
+  outcome               String?  @db.Text
+  pseudonym             String?  @db.Text
+  bio                   String?  @db.Text
+  profileImage          String?  @db.Text
+  profileImageOptimized String?  @db.Text
+  bot                   Boolean  @default(false)
+  botExcutedTime        Int?
+  myBoughtSize          Float?
+  created_at            DateTime @default(now()) @db.Timestamptz
+  updated_at            DateTime @updatedAt @db.Timestamptz
+
+  @@index([slug], name: "idx_slug")
+  @@index([title], name: "idx_title")
+  @@index([proxyWallet], name: "idx_proxyWallet")
+  @@index([conditionId], name: "idx_conditionId")
+  @@map("user_activities")
+}
+
+model Config {
+  id         String   @id @default(cuid())
+  key        String   @db.Text
+  value      String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  @@index([key], name: "idx_key")
+  @@map("configs")
+}

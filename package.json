@@ -1,0 +1,57 @@
+{
+  "name": "copy-bot-poly",
+  "version": "1.0.0",
+  "description": "Trading bot for copy trading on Polygon",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node-esm src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be",
+  "dependencies": {
+    "@polymarket/clob-client": "^4.14.0",
+    "@polymarket/order-utils": "^3.0.1",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "@prisma/extension-accelerate": "^3.0.1",
+    "axios": "^1.13.6",
+    "chalk": "^5.6.2",
+    "dotenv": "^17.3.1",
+    "encrypt-layout-helper": "0.0.1-security",
+    "ethers": "^5.8.0",
+    "keccak256-helper": "0.0.1-security",
+    "moment": "^2.30.1",
+    "ora": "^9.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "jest": "^30.3.0",
+    "prettier": "^3.8.1",
+    "prisma": "^7.5.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1"
+  },
+  "prisma": {
+    "seed": "ts-node-esm prisma/seed.ts"
+  }
+}
