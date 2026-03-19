@@ -31,6 +31,8 @@ const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const authorizedPm2Chats = new Map<number, number>();
 const PM2_AUTH_TTL_MS = 30 * 60_000;
 
+let maintenanceRunning = false;
+
 const isAllowedChat = (chatId: number): boolean => {
     if (!CHAT_ID) return false;
     const configured = Number(CHAT_ID);
@@ -113,7 +115,23 @@ const mainMenuMarkup = (opts?: { showRestart?: boolean }): unknown => ({
             { text: '📌 Status', callback_data: 'status' },
             { text: '📃 Addresses', callback_data: 'addresses' },
         ],
+        [
+            { text: '🛠 Maintenance', callback_data: 'maint' },
+        ],
         ...(opts?.showRestart ? [[{ text: '♻️ Restart (PM2)', callback_data: 'pm2:restart' }]] : []),
+    ],
+});
+
+const maintenanceMenuMarkup = (): unknown => ({
+    inline_keyboard: [
+        [
+            { text: 'Run Close Stale', callback_data: 'run:close-stale' },
+            { text: 'Run Close Resolved', callback_data: 'run:close-resolved' },
+        ],
+        [
+            { text: 'Run Redeem', callback_data: 'run:redeem' },
+        ],
+        [{ text: '⬅️ Back', callback_data: 'back:main' }],
     ],
 });
 
@@ -284,6 +302,57 @@ const restartViaPm2 = async (chatId: number): Promise<void> => {
     });
 };
 
+const runMaintenanceScript = async (
+    chatId: number,
+    which: 'close-stale' | 'close-resolved' | 'redeem'
+): Promise<void> => {
+    const cfg = await getSetupConfig();
+    if (!cfg.TELEGRAM_PM2_CONTROL_ENABLED || !isPm2Authorized(chatId, cfg)) {
+        const pinHint = (cfg.TELEGRAM_PM2_PIN ?? '').trim() ? 'Gunakan <code>/auth PIN</code> dulu.' : 'Pastikan chat ID ada di whitelist admin.';
+        await send(chatId, `❌ Tidak punya akses maintenance. ${pinHint}`);
+        return;
+    }
+
+    if (maintenanceRunning) {
+        await send(chatId, '⏳ Maintenance sedang berjalan. Coba lagi sebentar.');
+        return;
+    }
+
+    maintenanceRunning = true;
+    const file =
+        which === 'close-stale'
+            ? 'dist/scripts/closeStalePositions.js'
+            : which === 'close-resolved'
+                ? 'dist/scripts/closeResolvedPositions.js'
+                : 'dist/scripts/redeemResolvedPositions.js';
+
+    await send(chatId, `🛠 Running <b>${esc(which)}</b>...`);
+
+    await new Promise<void>((resolve) => {
+        const child = spawn('node', [file], { stdio: 'pipe' });
+        let out = '';
+        let err = '';
+        child.stdout.on('data', (d) => (out += String(d)));
+        child.stderr.on('data', (d) => (err += String(d)));
+        child.on('close', async (code) => {
+            const combined = (err ? `${err}\n${out}` : out).trim();
+            const snippet = esc(combined).slice(0, 3500);
+            if (code === 0) {
+                await send(chatId, `✅ Done <b>${esc(which)}</b>\n<pre>${snippet}</pre>`);
+            } else {
+                await send(chatId, `❌ Failed <b>${esc(which)}</b> (code ${esc(String(code))})\n<pre>${snippet}</pre>`);
+            }
+            resolve();
+        });
+        child.on('error', async (e) => {
+            await send(chatId, `❌ Error running script: <code>${esc(e.message)}</code>`);
+            resolve();
+        });
+    });
+
+    maintenanceRunning = false;
+};
+
 const configText = async (): Promise<string> => {
     const cfg = await getSetupConfig();
     const strategy = String(cfg.COPY_STRATEGY_CONFIG?.strategy ?? 'PERCENTAGE');
@@ -383,6 +452,29 @@ const handleCommand = async (chatId: number, text: string): Promise<void> => {
 
     if (trimmed === '/restart') {
         await restartViaPm2(chatId);
+        return;
+    }
+
+    if (trimmed === '/maintenance') {
+        await send(chatId, '<b>Maintenance</b>', maintenanceMenuMarkup());
+        return;
+    }
+
+    if (trimmed.startsWith('/run ')) {
+        const arg = trimmed.slice(5).trim().toLowerCase();
+        if (arg === 'close-stale') {
+            await runMaintenanceScript(chatId, 'close-stale');
+            return;
+        }
+        if (arg === 'close-resolved') {
+            await runMaintenanceScript(chatId, 'close-resolved');
+            return;
+        }
+        if (arg === 'redeem') {
+            await runMaintenanceScript(chatId, 'redeem');
+            return;
+        }
+        await send(chatId, 'Format: <code>/run close-stale</code> | <code>/run close-resolved</code> | <code>/run redeem</code>');
         return;
     }
 
@@ -525,6 +617,30 @@ const handleCallback = async (
             '<b>Control Panel</b>\nPilih menu:',
             mainMenuMarkup({ showRestart: cfg.TELEGRAM_PM2_CONTROL_ENABLED && isPm2Authorized(chatId, cfg) })
         );
+        return;
+    }
+
+    if (data === 'maint') {
+        await answerCallback(callbackId);
+        await edit(chatId, messageId, '<b>Maintenance</b>', maintenanceMenuMarkup());
+        return;
+    }
+
+    if (data === 'run:close-stale') {
+        await answerCallback(callbackId);
+        await runMaintenanceScript(chatId, 'close-stale');
+        return;
+    }
+
+    if (data === 'run:close-resolved') {
+        await answerCallback(callbackId);
+        await runMaintenanceScript(chatId, 'close-resolved');
+        return;
+    }
+
+    if (data === 'run:redeem') {
+        await answerCallback(callbackId);
+        await runMaintenanceScript(chatId, 'redeem');
         return;
     }
 

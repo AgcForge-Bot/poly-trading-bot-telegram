@@ -4,7 +4,7 @@
   "description": "Trading bot for copy trading on Polygon",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.scripts.json && node scripts/postbuild.mjs",
     "start": "node dist/index.js",
     "dev": "node --experimental-specifier-resolution=node --loader ts-node/esm src/index.ts",
     "help": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/help.ts",
@@ -27,7 +27,7 @@
     "find-gnosis-safe": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findGnosisSafeProxy.ts",
     "find-my-eoa": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findMyEOA.ts",
     "find-real-proxy": "node --experimental-specifier-resolution=node --loader ts-node/esm src/scripts/findRealProxyWallet.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",

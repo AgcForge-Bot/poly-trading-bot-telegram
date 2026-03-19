@@ -26,9 +26,9 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          echo "Installing dependencies..."
-          pnpm install
-          pnpm build
+          # echo "Installing dependencies..."
+          # pnpm install
+          # pnpm build
 
           # echo "Restarting bot..."
           # pm2 restart copy-bot-poly

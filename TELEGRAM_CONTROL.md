@@ -4,7 +4,7 @@ Project ini sudah punya Telegram controller berbasis **long polling** (tanpa web
 
 ## Cara kerja singkat
 
-- Bot di server akan *outbound* request ke Telegram API (`getUpdates`) untuk membaca command/menu.
+- Bot di server akan _outbound_ request ke Telegram API (`getUpdates`) untuk membaca command/menu.
 - Tidak perlu domain/HTTPS.
 - Pastikan hanya **1 instance** bot yang jalan untuk 1 token (kalau 2 instance, update bisa “rebutan”).
 
@@ -60,6 +60,10 @@ Command:
 - `/addresses` → tampilkan list address (AUTO/MANUAL)
 - `/auth 1234` → authorize PM2 control (jika PIN di-set)
 - `/restart` → restart PM2 (jika authorized)
+- `/maintenance` → menu maintenance
+- `/run close-stale` → jalankan close-stale sekali
+- `/run close-resolved` → jalankan close-resolved sekali
+- `/run redeem` → jalankan redeem sekali
 
 Menu inline button:
 
@@ -91,5 +95,7 @@ balance - cek balance proxy wallet
 addresses - lihat list address
 auth - authorize PM2: /auth PIN
 restart - restart proses via PM2
+maintenance - menu maintenance
+run - jalankan script: /run close-stale|close-resolved
+run - jalankan script: /run close-stale|close-resolved|redeem
 ```
-

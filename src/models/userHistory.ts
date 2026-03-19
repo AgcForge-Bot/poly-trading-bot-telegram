@@ -25,7 +25,6 @@ export const getUserActivity = async (walletAddress: string): Promise<UserActivi
         return [];
     }
 };
-
 export const getDailyReportDbStats = async (
     addresses: string[],
     isoDate: string,
@@ -108,3 +107,31 @@ export const getDailyReportDbStats = async (
         };
     }
 };
+export const setAllExecutedTime = async (walletAddress: string, executedTime: number) => {
+    try {
+        await prisma.userActivities.updateMany({
+            where: { proxyWallet: walletAddress, bot: true, botExcutedTime: 999 },
+            data: { botExcutedTime: executedTime },
+        });
+    } catch (error) {
+        console.error("Error setting all executed time:", error);
+    }
+};
+export const deleteAllCurrentActivities = async (walletAddress: string) => {
+    try {
+        await prisma.userActivities.deleteMany({
+            where: { proxyWallet: walletAddress, bot: true, botExcutedTime: 999 },
+        });
+    } catch (error) {
+        console.error("Error deleting all current activities:", error);
+    }
+}
+export const deleteAllCurrentPositions = async (walletAddress: string) => {
+    try {
+        await prisma.userPositions.deleteMany({
+            where: { proxyWallet: walletAddress, size: { gt: 0 } },
+        });
+    } catch (error) {
+        console.error("Error deleting all current positions:", error);
+    }
+}

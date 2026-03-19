@@ -53,13 +53,18 @@ Lalu set config Telegram via DB atau via Telegram `/set`.
 ```bash
 pnpm build
 
-# Jalankan
-pm2 start dist/index.js --name copy-bot-poly
-
+# Jalankan semua proses (bot + cron maintenance)
+pm2 start ecosystem.config.cjs
 # Auto start saat reboot
 pm2 save
 pm2 startup
 ```
+
+Cron jobs di `ecosystem.config.cjs`:
+
+- `copy-bot-close-stale` (*/15 menit)
+- `copy-bot-close-resolved` (*/30 menit)
+- `copy-bot-redeem` (7,22,37,52 menit tiap jam)
 
 Log & monitor:
 
@@ -87,4 +92,3 @@ Lalu chat bot kamu dan ketik:
   - `TELEGRAM_ADMIN_CHAT_IDS=["<chat_id_admin>"]`
   - `TELEGRAM_PM2_PIN=1234` (opsional)
 - Jangan jalankan 2 instance bot dengan token Telegram yang sama.
-

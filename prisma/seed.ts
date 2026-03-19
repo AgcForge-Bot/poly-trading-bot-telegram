@@ -90,7 +90,6 @@ const CONFIG_KEYS: string[] = [
     "TELEGRAM_CHAT_ID",
     "TELEGRAM_DAILY_REPORT_HOUR",
     "TRADING_ENABLED",
-
     "PM2_PROCESS_NAME",
 ];
 
