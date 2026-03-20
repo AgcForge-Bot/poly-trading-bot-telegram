@@ -7,6 +7,7 @@ const isHttpish = (v: string): boolean =>
     v.startsWith("http://") ||
     v.startsWith("https://") ||
     v.startsWith("postgres://") ||
+    v.startsWith("postgresql://") ||
     v.startsWith("prisma://") ||
     v.startsWith("mongodb://") ||
     v.startsWith("mongodb+srv://");
