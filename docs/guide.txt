@@ -1,0 +1,41 @@
+Guide (sanitized)
+
+Dokumen ini sengaja TANPA secret. Jangan pernah simpan:
+- `PRIVATE_KEY`
+- mnemonic/seed phrase
+- `TELEGRAM_BOT_TOKEN`
+- credential DB / MongoDB URI
+- `POLY_API_KEY` / `POLY_PASSPHRASE` / `POLY_SIGNATURE`
+
+## PM2 basic
+
+- Start semua proses (bot + cron maintenance):
+  - `pm2 start ecosystem.config.cjs`
+- Restart bot:
+  - `pm2 restart copy-bot-poly`
+- Stop bot:
+  - `pm2 stop copy-bot-poly`
+- Lihat log:
+  - `pm2 logs copy-bot-poly --lines 200`
+
+## Bersihkan log (biar error lama tidak ikut kebaca)
+
+- Flush log PM2:
+  - `pm2 flush copy-bot-poly`
+  - `pm2 flush` (semua proses)
+
+## Update environment (kalau `.env` berubah)
+
+- Restart dengan update env:
+  - `pm2 restart copy-bot-poly --update-env`
+
+## Telegram troubleshooting (long polling)
+
+- Pastikan webhook tidak aktif:
+  - `curl -s "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook"`
+  - `curl -s "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"`
+
+## Postgres TLS (Supabase)
+
+- Jika pakai `postgresql://...` dan password mengandung karakter khusus seperti `@`, encode sebagai `%40`.
+- Mode verifikasi paling aman adalah `sslmode=verify-full` (verifikasi chain + hostname), tapi butuh CA cert yang valid.

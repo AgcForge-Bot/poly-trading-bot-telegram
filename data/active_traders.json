@@ -1,89 +1,89 @@
 {
-  "updatedAt": "2026-03-19T20:26:52.326Z",
+  "updatedAt": "2026-03-20T02:00:06.711Z",
   "timePeriod": "DAY",
   "count": 10,
   "addresses": [
     "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
-    "0x07bdcabf60da99be8fad11092bf4e8412cffe993",
-    "0xd1be0932c621cc31edb32eae5cc7e8394faccc57",
-    "0x37c1874a60d348903594a96703e0507c518fc53a",
-    "0x492442eab586f242b53bda933fd5de859c8a3782",
-    "0xd9c4f7323b02bcb3e476291e9203239667006f95",
-    "0x07b8e44b90cc3e91b8d5fe60ea810d2534638e25",
-    "0xee613b3fc183ee44f9da9c05f53e2da107e3debf",
-    "0x2005d16a84ceefa912d4e380cd32e7ff827875ea",
-    "0x3b5c629f114098b0dee345fb78b7a3a013c7126e"
+    "0x03e8a544e97eeff5753bc1e90d46e5ef22af1697",
+    "0xd6a3f0ec6c4a8ad680d580610c82ca57ff139489",
+    "0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e",
+    "0x3b5c629f114098b0dee345fb78b7a3a013c7126e",
+    "0xc257ea7e3a81ca8e16df8935d44d513959fa358e",
+    "0x903221b1098263779ae19486028c844e8c338717",
+    "0x507e52ef684ca2dd91f90a9d26d149dd3288beae",
+    "0x93abbc022ce98d6f45d4444b594791cc4b7a9723",
+    "0x2c335066fe58fe9237c3d3dc7b275c2a034a0563"
   ],
   "metadata": [
     {
       "address": "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
       "userName": "0x2a2C53bD278c04DA9962Fcf96490E17F3DfB9Bc1-1772479215461",
-      "pnl": 489428.4179181705,
-      "vol": 13856518.270379,
-      "score": 0.8500000000000001
+      "pnl": 128795.1526110841,
+      "vol": 1505874.566418,
+      "score": 0.7041670560653754
     },
     {
-      "address": "0x07bdcabf60da99be8fad11092bf4e8412cffe993",
-      "userName": "imnotawizard",
-      "pnl": 471568.864418993,
-      "vol": 1196468.9837540002,
-      "score": 0.606990499830961
+      "address": "0x03e8a544e97eeff5753bc1e90d46e5ef22af1697",
+      "userName": "weflyhigh",
+      "pnl": 202693.70012761396,
+      "vol": 72677.524728,
+      "score": 0.6120656670795757
     },
     {
-      "address": "0xd1be0932c621cc31edb32eae5cc7e8394faccc57",
-      "userName": "smoothmove",
-      "pnl": 433198.88594247703,
-      "vol": 2513727.593158,
-      "score": 0.5993975344467715
+      "address": "0xd6a3f0ec6c4a8ad680d580610c82ca57ff139489",
+      "userName": "knedloveprovelo",
+      "pnl": 21940.805479620816,
+      "vol": 826623.4780890001,
+      "score": 0.3805315687653154
     },
     {
-      "address": "0x37c1874a60d348903594a96703e0507c518fc53a",
-      "userName": "CemeterySun",
-      "pnl": 230582.64157364913,
-      "vol": 2699117.3833159995,
-      "score": 0.4371481659344527
-    },
-    {
-      "address": "0x492442eab586f242b53bda933fd5de859c8a3782",
-      "userName": "0x492442EaB586F242B53bDa933fD5dE859c8A3782-1766317541188",
-      "pnl": 258053.47038362548,
-      "vol": 399727.085135,
-      "score": 0.41811380620005406
-    },
-    {
-      "address": "0xd9c4f7323b02bcb3e476291e9203239667006f95",
-      "userName": "MildredBK",
-      "pnl": 207376.06872045324,
-      "vol": 507547.974808,
-      "score": 0.3786414952296588
-    },
-    {
-      "address": "0x07b8e44b90cc3e91b8d5fe60ea810d2534638e25",
-      "userName": "joosangyoo",
-      "pnl": 150333.8393178353,
-      "vol": 2604596.333706,
-      "score": 0.36985708070365975
-    },
-    {
-      "address": "0xee613b3fc183ee44f9da9c05f53e2da107e3debf",
-      "userName": "sovereign2013",
-      "pnl": 130377.36026083957,
-      "vol": 3418960.839944001,
-      "score": 0.36823985724687824
-    },
-    {
-      "address": "0x2005d16a84ceefa912d4e380cd32e7ff827875ea",
-      "userName": "RN1",
-      "pnl": 89702.6153477002,
-      "vol": 4598886.542032,
-      "score": 0.3562854853942133
+      "address": "0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e",
+      "userName": "0p0jogggg",
+      "pnl": 74639.73464397495,
+      "vol": 93191.49216400001,
+      "score": 0.36276694197521847
     },
     {
       "address": "0x3b5c629f114098b0dee345fb78b7a3a013c7126e",
       "userName": "SMCAOMCRL",
-      "pnl": 128286.68443374464,
-      "vol": 2004095.1025620003,
-      "score": 0.34100411111139206
+      "pnl": 56362.948633420514,
+      "vol": 75024.56666099999,
+      "score": 0.3236831399594861
+    },
+    {
+      "address": "0xc257ea7e3a81ca8e16df8935d44d513959fa358e",
+      "userName": "YT-JuicySlots",
+      "pnl": 55701.243988279064,
+      "vol": 65767.33808500001,
+      "score": 0.3208404655968546
+    },
+    {
+      "address": "0x903221b1098263779ae19486028c844e8c338717",
+      "userName": "0x903221b1",
+      "pnl": 38977.81043805232,
+      "vol": 194384.34555,
+      "score": 0.30919063428806004
+    },
+    {
+      "address": "0x507e52ef684ca2dd91f90a9d26d149dd3288beae",
+      "userName": "GamblingIsAllYouNeed",
+      "pnl": 19073.474667486225,
+      "vol": 338689.039585,
+      "score": 0.29386795836521185
+    },
+    {
+      "address": "0x93abbc022ce98d6f45d4444b594791cc4b7a9723",
+      "userName": "gatorr",
+      "pnl": 30792.328667677368,
+      "vol": 167968.70162,
+      "score": 0.2886518005322155
+    },
+    {
+      "address": "0x2c335066fe58fe9237c3d3dc7b275c2a034a0563",
+      "userName": "0x2c335066FE58fe9237c3d3Dc7b275C2a034a0563-1759935795465",
+      "pnl": 37991.99953743501,
+      "vol": 30375.777487000003,
+      "score": 0.2800170886543107
     }
   ]
 }
