@@ -10,5 +10,4 @@ node_modules
 dist
 .env
 logs
-pnpm-lock.yaml
 server-setup.sh

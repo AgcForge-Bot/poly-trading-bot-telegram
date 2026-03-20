@@ -33,6 +33,13 @@ const PM2_AUTH_TTL_MS = 30 * 60_000;
 
 let maintenanceRunning = false;
 
+type PendingInput =
+    | { type: 'user_addresses'; startedAtMs: number }
+    | { type: 'none'; startedAtMs: number };
+
+const pendingByChat = new Map<number, PendingInput>();
+const INPUT_TTL_MS = 10 * 60_000;
+
 const allowedChatIds = (() => {
     const ids: number[] = [];
     const primary = Number(TELEGRAM_CHAT_ID_CONTROL);
@@ -47,6 +54,55 @@ const allowedChatIds = (() => {
 })();
 
 const isAllowedChat = (chatId: number): boolean => allowedChatIds.includes(chatId);
+
+const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+
+const parseUserAddressesInput = (raw: string): string[] => {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return [];
+
+    const normalizeList = (items: unknown[]): string[] => {
+        const addresses = items
+            .map((v) => String(v).trim().toLowerCase())
+            .filter((v) => v.length > 0);
+
+        const unique: string[] = [];
+        const seen = new Set<string>();
+        for (const a of addresses) {
+            if (!ADDR_RE.test(a)) {
+                throw new Error(`Invalid address: ${a}`);
+            }
+            if (!seen.has(a)) {
+                unique.push(a);
+                seen.add(a);
+            }
+        }
+        return unique;
+    };
+
+    if (trimmed.startsWith('[')) {
+        const parsed = JSON.parse(trimmed);
+        if (!Array.isArray(parsed)) throw new Error('JSON must be an array');
+        return normalizeList(parsed);
+    }
+
+    const parts = trimmed
+        .split(/[\s,]+/)
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+    return normalizeList(parts);
+};
+
+const getPending = (chatId: number): PendingInput | null => {
+    const p = pendingByChat.get(chatId);
+    if (!p) return null;
+    if (Date.now() - p.startedAtMs > INPUT_TTL_MS) {
+        pendingByChat.delete(chatId);
+        return null;
+    }
+    return p;
+};
 
 const normalizeChatId = (raw: string): number | null => {
     const n = Number(raw);
@@ -144,21 +200,32 @@ const maintenanceMenuMarkup = (): unknown => ({
     ],
 });
 
-const configMenuMarkup = (cfg: SetupConfig): unknown => ({
-    inline_keyboard: [
+const configMenuMarkup = (cfg: SetupConfig): unknown => {
+    const rows: unknown[] = [
         [
             { text: 'Strategy', callback_data: 'cfg:menu:strategy' },
             { text: 'Slippage', callback_data: 'cfg:menu:slippage' },
         ],
         [
             { text: 'Own Custom $', callback_data: 'cfg:menu:own' },
-            { text: cfg.USE_AUTO_TRADE_ADDRESS_FROM_API ? 'AUTO: ON' : 'AUTO: OFF', callback_data: cfg.USE_AUTO_TRADE_ADDRESS_FROM_API ? 'cfg:auto:0' : 'cfg:auto:1' },
+            {
+                text: cfg.USE_AUTO_TRADE_ADDRESS_FROM_API ? 'AUTO: ON' : 'AUTO: OFF',
+                callback_data: cfg.USE_AUTO_TRADE_ADDRESS_FROM_API ? 'cfg:auto:0' : 'cfg:auto:1',
+            },
         ],
-        [
-            { text: '⬅️ Back', callback_data: 'back:main' },
-        ],
-    ],
-});
+    ];
+
+    if (!cfg.USE_AUTO_TRADE_ADDRESS_FROM_API) {
+        rows.push([
+            { text: 'USER_ADDRESSES', callback_data: 'cfg:menu:editaddresses' },
+            { text: 'LEADERBOARD_PERIOD', callback_data: 'cfg:menu:leaderboardperiod' },
+        ]);
+    }
+
+    rows.push([{ text: '⬅️ Back', callback_data: 'back:main' }]);
+
+    return { inline_keyboard: rows };
+};
 
 const strategyMenuMarkup = (current: string): unknown => ({
     inline_keyboard: [
@@ -201,6 +268,39 @@ const ownCustomMenuMarkup = (current: number): unknown => {
         ],
     };
 };
+
+const editAddressesMenuMarkup = (cfg: SetupConfig): unknown => {
+    const auto = cfg.USE_AUTO_TRADE_ADDRESS_FROM_API === true;
+    const buttons = auto
+        ? [[{ text: 'AUTO ON — disable first', callback_data: 'noop' }]]
+        : [[
+            { text: 'Use Persisted', callback_data: 'cfg:addr:from-active' },
+            { text: 'Clear', callback_data: 'cfg:addr:clear' },
+        ],
+        [
+            { text: 'Paste Manual', callback_data: 'cfg:addr:manual' },
+        ]];
+    return {
+        inline_keyboard: [
+            ...buttons,
+            [{ text: '⬅️ Back', callback_data: 'config' }],
+        ],
+    };
+};
+
+const leaderboardPeriodMenuMarkup = (current?: string): unknown => ({
+    inline_keyboard: [
+        [
+            { text: current === 'ALL' ? '✅ ALL' : 'ALL', callback_data: 'cfg:lperiod:ALL' },
+            { text: current === 'MONTH' ? '✅ MONTH' : 'MONTH', callback_data: 'cfg:lperiod:MONTH' },
+        ],
+        [
+            { text: current === 'WEEK' ? '✅ WEEK' : 'WEEK', callback_data: 'cfg:lperiod:WEEK' },
+            { text: current === 'DAY' ? '✅ DAY' : 'DAY', callback_data: 'cfg:lperiod:DAY' },
+        ],
+        [{ text: '⬅️ Back', callback_data: 'config' }],
+    ],
+});
 
 const statusText = async (): Promise<string> => {
     const cfg = await getSetupConfig();
@@ -380,7 +480,12 @@ const configText = async (): Promise<string> => {
         `\n<i>Update via:</i>\n` +
         `<code>/set KEY VALUE</code>\n` +
         `<i>Contoh:</i> <code>/set COPY_STRATEGY OWN_CUSTOM</code>\n` +
-        `<i>Contoh:</i> <code>/set OWN_CUSTOM_AMOUNT_USD 1.0</code>`
+        `<i>Contoh:</i> <code>/set OWN_CUSTOM_AMOUNT_USD 1.0</code>\n` +
+        `<i>Contoh:</i> <code>/set USER_ADDRESSES ["0x123...", "0x456..."]</code>\n` +
+        `<i>Contoh:</i> <code>/set PROXY_WALLET 0x789...</code>\n` +
+        `<i>Contoh:</i> <code>/set PRIVATE_KEY "0x12345...."</code>\n` +
+        `<i>Contoh:</i> <code>/set MAX_ORDER_SIZE_USD 3.0</code>\n` +
+        `<i>Contoh:</i> <code>/set MIN_ORDER_SIZE_USD 1.0</code>`
     );
 };
 
@@ -404,6 +509,44 @@ const resumeTrading = async (chatId: number): Promise<void> => {
 
 const handleCommand = async (chatId: number, text: string): Promise<void> => {
     const trimmed = text.trim();
+
+    const pending = getPending(chatId);
+    if (pending?.type === 'user_addresses') {
+        if (trimmed === '/cancel') {
+            pendingByChat.delete(chatId);
+            await send(chatId, '✅ Dibatalkan.');
+            return;
+        }
+
+        if (trimmed.startsWith('/')) {
+            pendingByChat.delete(chatId);
+        } else {
+            const cfg = await getSetupConfig();
+            if (cfg.USE_AUTO_TRADE_ADDRESS_FROM_API) {
+                pendingByChat.delete(chatId);
+                await send(chatId, 'AUTO masih ON. Matikan AUTO dulu untuk edit USER_ADDRESSES.');
+                return;
+            }
+
+            try {
+                const list = parseUserAddressesInput(trimmed).slice(0, 50);
+                await updateByKey('USER_ADDRESSES', JSON.stringify(list));
+                pendingByChat.delete(chatId);
+                await send(
+                    chatId,
+                    `✅ USER_ADDRESSES di-update: <b>${esc(String(list.length))}</b> alamat.`
+                );
+                return;
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                await send(
+                    chatId,
+                    `❌ Gagal parse USER_ADDRESSES: <code>${esc(msg)}</code>\n\nKirim ulang list address, atau <code>/cancel</code>.`
+                );
+                return;
+            }
+        }
+    }
     if (trimmed === '/start' || trimmed === '/menu') {
         const cfg = await getSetupConfig();
         await send(
@@ -542,6 +685,12 @@ const handleCommand = async (chatId: number, text: string): Promise<void> => {
         return;
     }
 
+    if (trimmed === '/cancel') {
+        pendingByChat.delete(chatId);
+        await send(chatId, '✅ Tidak ada input yang menunggu.');
+        return;
+    }
+
     await send(chatId, 'Command tidak dikenal. Pakai <code>/menu</code>');
 };
 
@@ -666,6 +815,8 @@ const handleCallback = async (
         const strategy = String(cfg.COPY_STRATEGY_CONFIG?.strategy ?? 'PERCENTAGE');
         const slipPct = Math.round((cfg.MAX_SLIPPAGE_PERCENT ?? 0.15) * 100);
         const ownAmt = cfg.OWN_CUSTOM_AMOUNT_USD;
+        const editAddresses = cfg.USER_ADDRESSES?.join(', ') ?? '';
+        const leaderboardPeriod = cfg.LEADERBOARD_TIME_PERIOD ?? 'WEEK';
         const menu = data.split(':')[2];
         if (menu === 'strategy') {
             await edit(chatId, messageId, await configText(), strategyMenuMarkup(strategy));
@@ -677,6 +828,14 @@ const handleCallback = async (
         }
         if (menu === 'own') {
             await edit(chatId, messageId, await configText(), ownCustomMenuMarkup(ownAmt));
+            return;
+        }
+        if (menu === 'editaddresses') {
+            await edit(chatId, messageId, await configText(), editAddressesMenuMarkup(cfg));
+            return;
+        }
+        if (menu === 'leaderboardperiod') {
+            await edit(chatId, messageId, await configText(), leaderboardPeriodMenuMarkup(leaderboardPeriod));
             return;
         }
         await edit(chatId, messageId, await configText(), configMenuMarkup(cfg));
@@ -716,6 +875,57 @@ const handleCallback = async (
         await updateByKey('USE_AUTO_TRADE_ADDRESS_FROM_API', v === '1' ? 'true' : 'false');
         const cfg = await getSetupConfig();
         await edit(chatId, messageId, `✅ AUTO_MODE set to <b>${esc(v === '1' ? 'true' : 'false')}</b>\n\n${await configText()}`, configMenuMarkup(cfg));
+        return;
+    }
+
+    if (data.startsWith('cfg:addr:')) {
+        await answerCallback(callbackId);
+        const action = data.split(':')[2] as string;
+        const cfg = await getSetupConfig();
+        if (cfg.USE_AUTO_TRADE_ADDRESS_FROM_API) {
+            await edit(chatId, messageId, `AUTO ON — matikan dulu untuk edit USER_ADDRESSES.`, configMenuMarkup(cfg));
+            return;
+        }
+        if (action === 'from-active') {
+            const live = getActiveAddresses();
+            const list = (live.length > 0 ? live : await loadPersistedTraders().catch(() => [])).slice(0, 50);
+            await updateByKey('USER_ADDRESSES', JSON.stringify(list));
+            await edit(chatId, messageId, `✅ USER_ADDRESSES di-set (${list.length} alamat).`, configMenuMarkup(await getSetupConfig()));
+            return;
+        }
+        if (action === 'clear') {
+            await updateByKey('USER_ADDRESSES', '[]');
+            await edit(chatId, messageId, `✅ USER_ADDRESSES dikosongkan.`, configMenuMarkup(await getSetupConfig()));
+            return;
+        }
+        if (action === 'manual') {
+            pendingByChat.set(chatId, { type: 'user_addresses', startedAtMs: Date.now() });
+            await send(
+                chatId,
+                `<b>Paste USER_ADDRESSES</b>\n` +
+                `Kirim list address (max 50) dalam salah satu format:\n` +
+                `- JSON array: <code>["0x...","0x..."]</code>\n` +
+                `- Newline / comma separated\n\n` +
+                `Ketik <code>/cancel</code> untuk batal.`
+            );
+            await edit(chatId, messageId, await configText(), editAddressesMenuMarkup(cfg));
+            return;
+        }
+        await edit(chatId, messageId, await configText(), configMenuMarkup(cfg));
+        return;
+    }
+
+    if (data.startsWith('cfg:lperiod:')) {
+        await answerCallback(callbackId);
+        const period = data.split(':')[2] as 'ALL' | 'MONTH' | 'WEEK' | 'DAY';
+        await updateByKey('LEADERBOARD_TIME_PERIOD', period);
+        const cfg = await getSetupConfig();
+        await edit(chatId, messageId, `✅ LEADERBOARD_TIME_PERIOD set to <b>${esc(period)}</b>\n\n${await configText()}`, configMenuMarkup(cfg));
+        return;
+    }
+
+    if (data === 'noop') {
+        await answerCallback(callbackId);
         return;
     }
 
