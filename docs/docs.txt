@@ -1,6 +1,0 @@
-https://medium.com/@robinviktorsson/setting-up-eslint-and-prettier-for-a-typescript-project-aa2434417b8f
-
-pnpm -s health-check
-
-
-https://www.google.com/search?smstk=ChhEY28rMzU4cXZPMTY3eWUydjZHMkdaST0QBA%3D%3D&smstidx=0&q=cara+membuat+menu+bot+telegram+interactive+dengan+tampilan+menu+button&udm=50&csuir=1&aep=34&kgs=e228991f7b063990&shndl=37&shmd=H4sIAAAAAAAA_3VOOw7CMAyla4_AlBmJhi4MiJlrRG5ipZZqJ0pcyhk5CqcgiBExvaen9-tfXX_zUMAw8rSCNpTVTEmN4oKxABsSxQJe6Y4moEQQo8CZlka-7lU1yf46q-Z6sXbbtiFWBSU_-MS2IhQ_H3NJnCwQuzpDQafzypMALUOWeNg9O_evgBgiVjsVkEASbUwptnOu3QuEonZ8_Giu5SVACW48n0L-bLwBWKKtWu0AAAA&shmds=v1_ATWGeePIP1ukm097zw8KCzf911fsgFZAaVQ5_Ela3BhnJg12KQ&source=sh%2Fx%2Faio%2Fm1%2F1

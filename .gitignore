@@ -1,3 +1,4 @@
+docs
 docs/*.log
 docs/results*.json
 docs/results*.txt
