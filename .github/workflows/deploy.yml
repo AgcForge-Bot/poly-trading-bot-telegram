@@ -19,6 +19,16 @@ jobs:
         script: |
           set -e
 
+          # ==========================================
+          # INSTALL PNPM IF NOT EXISTS
+          # ==========================================
+          if ! command -v pnpm &> /dev/null; then
+            echo "📦 Installing pnpm globally..."
+            npm install -g pnpm@latest
+          else
+            echo "✅ pnpm already installed: $(pnpm --version)"
+          fi
+
           # Go to project directory
           cd /var/www/bot/poly-trading-bot-telegram
 
@@ -42,15 +52,11 @@ jobs:
           # ==========================================
           echo "🧹 Cleaning previous installation..."
 
-          # Backup current node_modules if needed (optional)
-          # mv node_modules node_modules_backup_$(date +%s) || true
-
           # Clean install dependencies
           echo "📦 Installing dependencies with pnpm..."
 
-          # Remove node_modules and lock file untuk clean install
+          # Remove node_modules untuk clean install
           rm -rf node_modules
-          rm -f pnpm-lock.yaml
 
           # Install with frozen lockfile untuk memastikan konsistensi
           if [ -f "pnpm-lock.yaml" ]; then
@@ -83,7 +89,7 @@ jobs:
           # Check if PM2 is installed
           if ! command -v pm2 &> /dev/null; then
             echo "⚠️  PM2 not found, installing globally..."
-            pnpm install -g pm2@latest
+            npm install -g pm2@latest
           fi
 
           # Check if process exists
@@ -128,16 +134,12 @@ jobs:
           # CLEANUP
           # ==========================================
           echo "🧹 Cleaning up..."
-          # Remove old node_modules backups (keep last 3)
-          ls -dt node_modules_backup_* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
 
           echo "========================================="
           echo "✅ Deployment completed successfully!"
           echo "========================================="
 
           # Show final status
-          echo ""
-          echo "📊 Current PM2 process status:"
           pm2 list
           echo ""
           echo "📊 Recent logs:"
