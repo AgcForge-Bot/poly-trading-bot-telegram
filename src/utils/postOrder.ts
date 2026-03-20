@@ -193,15 +193,26 @@ const postOrder = async (
 
         Logger.info(`📊 ${orderCalc.reasoning}`);
 
+        if (orderCalc.finalAmount < MIN_ORDER_USD_SIZE) {
+            Logger.warning(
+                `❌ Cannot execute: final amount $${orderCalc.finalAmount.toFixed(2)} < minimum $${MIN_ORDER_USD_SIZE.toFixed(2)}`
+            );
+            await prisma.userActivities.update({ where: { id: trade.id }, data: { bot: true } });
+            return;
+        }
+
         if (orderCalc.finalAmount === 0) {
             Logger.warning(`❌ Cannot execute: ${orderCalc.reasoning}`);
             await prisma.userActivities.update({ where: { id: trade.id }, data: { bot: true } });
             return;
         }
 
-        const isOwnCustom = String((COPY_STRATEGY_CONFIG as unknown as { strategy?: unknown })?.strategy) === 'OWN_CUSTOM';
+        const isOwnCustom =
+            String((COPY_STRATEGY_CONFIG as unknown as { strategy?: unknown })?.strategy) === 'OWN_CUSTOM';
 
-        let remaining = isOwnCustom ? Math.min(orderCalc.finalAmount, OWN_CUSTOM_AMOUNT_USD) : orderCalc.finalAmount,
+        let remaining = isOwnCustom
+                ? Math.min(orderCalc.finalAmount, OWN_CUSTOM_AMOUNT_USD)
+                : orderCalc.finalAmount,
             retry = 0;
         let abortDueToFunds = false,
             totalBoughtTokens = 0;
@@ -275,6 +286,16 @@ const postOrder = async (
             }
 
             const orderUSD = Math.min(remaining, parseFloat(bestAsk.size) * askPrice);
+            if (orderUSD < MIN_ORDER_USD_SIZE) {
+                Logger.warning(
+                    `Order book liquidity too small at best ask — $${orderUSD.toFixed(2)} < $${MIN_ORDER_USD_SIZE.toFixed(2)} minimum`
+                );
+                await prisma.userActivities.update({
+                    where: { id: trade.id },
+                    data: { bot: true, myBoughtSize: totalBoughtTokens },
+                });
+                break;
+            }
             Logger.info(`Creating order: $${orderUSD.toFixed(2)} @ $${askPrice}`);
 
             const signed = await clobClient.createMarketOrder({

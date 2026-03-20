@@ -297,7 +297,8 @@ const restartViaPm2 = async (chatId: number): Promise<void> => {
         child.stdout.on('data', (d) => (out += String(d)));
         child.stderr.on('data', (d) => (err += String(d)));
         child.on('close', async (code) => {
-            if (code === 0) {
+            const successByOutput = out.includes('Applying action restartProcessId') || out.includes('Applying action restart');
+            if (code === 0 || (code === null && successByOutput && err.trim().length === 0)) {
                 await send(chatId, `✅ PM2 restarted <code>${esc(procName)}</code>\n<pre>${esc(out).slice(0, 1500)}</pre>`);
             } else {
                 await send(chatId, `❌ PM2 restart failed (code ${esc(String(code))})\n<pre>${esc((err || out)).slice(0, 1500)}</pre>`);

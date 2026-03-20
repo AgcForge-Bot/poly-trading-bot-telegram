@@ -30,31 +30,29 @@ const createClobClient = async (): Promise<ClobClient> => {
     );
 
     // ── Step 1: Obtain API credentials ───────────────────────────────────────
-    // Try createApiKey first; fall back to deriveApiKey if it already exists.
-    // Never suppress console.error globally — catch errors properly instead.
+    // Prefer deriveApiKey first to avoid noisy 400 logs when an API key already
+    // exists for the address (common in production).
     let creds: Awaited<ReturnType<typeof unauthClient.createApiKey>> | undefined;
 
     try {
-        creds = await unauthClient.createApiKey();
-        if (creds?.key) {
-            Logger.success(`CLOB API key created (key: ${creds.key.slice(0, 8)}...)`);
-        } else {
-            throw new Error('createApiKey returned empty credentials');
+        creds = await unauthClient.deriveApiKey();
+        if (!creds?.key) {
+            throw new Error('deriveApiKey returned empty credentials');
         }
-    } catch (_createErr) {
-        // Key already exists — derive it instead
-        Logger.info('createApiKey failed (key likely exists), deriving existing key...');
+        Logger.success(`CLOB API key derived (key: ${creds.key.slice(0, 8)}...)`);
+    } catch (_deriveErr) {
+        Logger.info('deriveApiKey failed, creating a new API key...');
         try {
-            creds = await unauthClient.deriveApiKey();
+            creds = await unauthClient.createApiKey();
             if (!creds?.key) {
-                throw new Error('deriveApiKey returned empty credentials');
+                throw new Error('createApiKey returned empty credentials');
             }
-            Logger.success(`CLOB API key derived (key: ${creds.key.slice(0, 8)}...)`);
-        } catch (deriveErr) {
+            Logger.success(`CLOB API key created (key: ${creds.key.slice(0, 8)}...)`);
+        } catch (createErr) {
             throw new Error(
                 `Failed to obtain CLOB API credentials. ` +
-                `Check PRIVATE_KEY and PROXY_WALLET in your .env file.\n` +
-                `Details: ${deriveErr instanceof Error ? deriveErr.message : String(deriveErr)}`
+                `Check PRIVATE_KEY and PROXY_WALLET in your config.\n` +
+                `Details: ${createErr instanceof Error ? createErr.message : String(createErr)}`
             );
         }
     }
