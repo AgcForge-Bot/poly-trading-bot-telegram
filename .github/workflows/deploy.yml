@@ -19,6 +19,14 @@ jobs:
         script: |
           set -e
 
+          # Setup environment variables
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+          # Use specific Node version
+          nvm use 24 || node --version
+
           # ==========================================
           # INSTALL PNPM IF NOT EXISTS
           # ==========================================
