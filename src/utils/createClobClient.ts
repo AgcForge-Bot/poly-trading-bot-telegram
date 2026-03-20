@@ -19,9 +19,20 @@ const createClobClient = async (): Promise<ClobClient> => {
     const chainId = 137; // Polygon mainnet
     const wallet = new ethers.Wallet(PRIVATE_KEY);
 
+    const host = String(CLOB_HTTP_URL ?? '').trim().replace(/\/+$/, '');
+    if (!host) {
+        throw new Error('CLOB_HTTP_URL is not set');
+    }
+
+    Logger.info(
+        `CLOB auth init: signer=${wallet.address.slice(0, 8)}…${wallet.address.slice(-6)} ` +
+            `proxy=${String(PROXY_WALLET).slice(0, 8)}…${String(PROXY_WALLET).slice(-6)} ` +
+            `host=${host}`
+    );
+
     // Build an unauthenticated client to obtain credentials
     const unauthClient = new ClobClient(
-        CLOB_HTTP_URL,
+        host,
         chainId,
         wallet,
         undefined,
@@ -49,17 +60,26 @@ const createClobClient = async (): Promise<ClobClient> => {
             }
             Logger.success(`CLOB API key created (key: ${creds.key.slice(0, 8)}...)`);
         } catch (createErr) {
-            throw new Error(
-                `Failed to obtain CLOB API credentials. ` +
-                `Check PRIVATE_KEY and PROXY_WALLET in your config.\n` +
-                `Details: ${createErr instanceof Error ? createErr.message : String(createErr)}`
-            );
+            Logger.info('createApiKey failed, retrying deriveApiKey...');
+            try {
+                creds = await unauthClient.deriveApiKey();
+                if (!creds?.key) {
+                    throw new Error('deriveApiKey returned empty credentials');
+                }
+                Logger.success(`CLOB API key derived (key: ${creds.key.slice(0, 8)}...)`);
+            } catch {
+                throw new Error(
+                    `Failed to obtain CLOB API credentials. ` +
+                        `Check PRIVATE_KEY and PROXY_WALLET in your config.\n` +
+                        `Details: ${createErr instanceof Error ? createErr.message : String(createErr)}`
+                );
+            }
         }
     }
 
     // ── Step 2: Build the authenticated client ────────────────────────────────
     const authClient = new ClobClient(
-        CLOB_HTTP_URL,
+        host,
         chainId,
         wallet,
         creds,

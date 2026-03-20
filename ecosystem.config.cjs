@@ -7,6 +7,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/copy-bot-poly/copy-bot-poly-error.log',
+      out_file: '/var/log/copy-bot-poly/copy-bot-poly-output.log',
+      merge_logs: true,
+      log_type: 'raw',
+      node_args: '--max-old-space-size=1024 --enable-source-maps',
     },
     {
       name: 'copy-bot-close-stale',
@@ -19,6 +25,11 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/copy-bot-close-stale/close-stale-error.log',
+      out_file: '/var/log/copy-bot-close-stale/close-stale-output.log',
+      merge_logs: true,
+      node_args: '--enable-source-maps',
     },
     {
       name: 'copy-bot-close-resolved',
@@ -31,6 +42,11 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/copy-bot-close-resolved/close-resolved-error.log',
+      out_file: '/var/log/copy-bot-close-resolved/close-resolved-output.log',
+      merge_logs: true,
+      node_args: '--enable-source-maps',
     },
     {
       name: 'copy-bot-redeem',
@@ -43,6 +59,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/copy-bot-redeem/redeem-error.log',
+      out_file: '/var/log/copy-bot-redeem/redeem-output.log',
+      merge_logs: true,
+
+      node_args: '--enable-source-maps',
     },
   ],
 };
