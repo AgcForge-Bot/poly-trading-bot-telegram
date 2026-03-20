@@ -4,6 +4,8 @@ docs/results*.json
 docs/results*.txt
 docs/*pm2*.json
 *.log
+*.zip
+*.txt
 node_modules
 dist
 .env

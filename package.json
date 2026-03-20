@@ -31,7 +31,12 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "db:seed": "prisma db seed"
+    "db:init": "npx prisma init",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:reset": "npx prisma migrate reset",
+    "config-info": "tsx prisma/info.ts"
   },
   "type": "module",
   "keywords": [],
