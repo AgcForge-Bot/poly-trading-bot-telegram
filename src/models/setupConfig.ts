@@ -51,26 +51,43 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     PM2_PROCESS_NAME: 'copy-bot-poly',
 };
 
+const normalizeScalar = (raw: string | undefined): string | undefined => {
+    if (raw === undefined) return undefined;
+    let v = raw.trim();
+    if (v.length >= 2) {
+        const first = v[0];
+        const last = v[v.length - 1];
+        if ((first === last && (first === '"' || first === "'" || first === '`'))) {
+            v = v.slice(1, -1).trim();
+        }
+    }
+    return v;
+};
+
 const parseNumber = (raw: string | undefined, fallback: number): number => {
-    if (raw === undefined) return fallback;
-    const n = Number(raw);
+    const v = normalizeScalar(raw);
+    if (v === undefined || v.length === 0) return fallback;
+    const cleaned = v.replace(/[$,%_\s]/g, '').replace(/,/g, '');
+    const n = Number(cleaned);
     return Number.isFinite(n) ? n : fallback;
 };
 
 const parseIntSafe = (raw: string | undefined, fallback: number): number => {
-    if (raw === undefined) return fallback;
-    const n = parseInt(raw, 10);
+    const v = normalizeScalar(raw);
+    if (v === undefined || v.length === 0) return fallback;
+    const cleaned = v.replace(/[$,%_\s]/g, '').replace(/,/g, '');
+    const n = parseInt(cleaned, 10);
     return Number.isFinite(n) ? n : fallback;
 };
 
 const parseBool = (raw: string | undefined, fallback: boolean): boolean => {
-    if (raw === undefined) return fallback;
-    return raw === 'true' || raw === '1' || raw.toLowerCase() === 'yes';
+    const v = normalizeScalar(raw);
+    if (v === undefined) return fallback;
+    return v === 'true' || v === '1' || v.toLowerCase() === 'yes';
 };
 
 const parseUserAddresses = (input: string | undefined): string[] => {
-    if (!input) return [];
-    const trimmed = input.trim();
+    const trimmed = normalizeScalar(input) ?? '';
     if (trimmed.length === 0) return [];
 
     if (trimmed.startsWith('[')) {
@@ -91,8 +108,7 @@ const parseUserAddresses = (input: string | undefined): string[] => {
 };
 
 const parseStringList = (input: string | undefined): string[] => {
-    if (!input) return [];
-    const trimmed = input.trim();
+    const trimmed = normalizeScalar(input) ?? '';
     if (trimmed.length === 0) return [];
 
     if (trimmed.startsWith('[')) {
@@ -122,7 +138,7 @@ const buildConfigMap = (rows: ConfigRow[]): Map<string, string> => {
 };
 
 const getCfg = (m: Map<string, string>, key: string): string | undefined => {
-    return m.get(key) ?? CONFIG_DEFAULTS[key];
+    return normalizeScalar(m.get(key) ?? CONFIG_DEFAULTS[key]);
 };
 
 const parseCopyStrategyConfig = (m: Map<string, string>): CopyStrategyConfig => {
