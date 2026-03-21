@@ -12,6 +12,7 @@ const PROXY_WALLET = ENV.PROXY_WALLET;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
 const TRADE_AGGREGATION_ENABLED = ENV.TRADE_AGGREGATION_ENABLED;
 const TRADE_AGGREGATION_WINDOW_SECONDS = ENV.TRADE_AGGREGATION_WINDOW_SECONDS;
+const MAX_PENDING_TRADE_AGE_SECONDS = ENV.MAX_PENDING_TRADE_AGE_SECONDS;
 const AGGREGATION_MIN_USD = 1.0; // Polymarket order minimum
 
 
@@ -22,14 +23,32 @@ const AGGREGATION_MIN_USD = 1.0; // Polymarket order minimum
  */
 const readPendingTrades = async (addresses: string[]): Promise<TradeWithUser[]> => {
     const all: TradeWithUser[] = [];
+    const cutoff = new Date(Date.now() - MAX_PENDING_TRADE_AGE_SECONDS * 1000);
 
     for (const address of addresses) {
+        const pruned = await prisma.userActivities.updateMany({
+            where: {
+                proxyWallet: address,
+                type: 'TRADE',
+                bot: false,
+                botExcutedTime: 0,
+                created_at: { lt: cutoff },
+            },
+            data: { bot: true, botExcutedTime: 999 },
+        });
+        if (pruned.count > 0) {
+            Logger.info(
+                `Pruned ${pruned.count} stale trade(s) for ${address.slice(0, 6)}...${address.slice(-4)}`
+            );
+        }
+
         const trades = await prisma.userActivities.findMany({
             where: {
                 proxyWallet: address,
                 type: 'TRADE',
                 bot: false,
                 botExcutedTime: 0,
+                created_at: { gte: cutoff },
             },
             orderBy: { created_at: "desc" },
         });
@@ -141,6 +160,14 @@ const buildContext = async (conditionId: string, traderAddress: string): Promise
 };
 const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]): Promise<void> => {
     for (const trade of trades) {
+        const ageMs = Date.now() - (trade.created_at?.getTime?.() ?? 0);
+        if (ageMs > MAX_PENDING_TRADE_AGE_SECONDS * 1000) {
+            await prisma.userActivities.update({
+                where: { id: trade.id },
+                data: { bot: true, botExcutedTime: 999 },
+            });
+            continue;
+        }
 
         await prisma.userActivities.update({
             where: { id: trade.id },
@@ -160,6 +187,36 @@ const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]): Promi
         try {
             const ctx = await buildContext(trade?.conditionId ?? '', trade.userAddress);
             Logger.balance(ctx.my_balance, ctx.user_balance, trade.userAddress);
+
+            if (trade.side === 'BUY') {
+                const end = (ctx.user_position as unknown as { endDate?: unknown })?.endDate;
+                const redeemable = (ctx.user_position as unknown as { redeemable?: unknown })?.redeemable;
+                const endMs = end ? new Date(String(end)).getTime() : NaN;
+                if (Number.isFinite(endMs) && endMs <= Date.now()) {
+                    await prisma.userActivities.update({
+                        where: { id: trade.id },
+                        data: { bot: true, botExcutedTime: 999 },
+                    });
+                    Logger.info('Skip BUY: market ended');
+                    continue;
+                }
+                if (redeemable === true) {
+                    await prisma.userActivities.update({
+                        where: { id: trade.id },
+                        data: { bot: true, botExcutedTime: 999 },
+                    });
+                    Logger.info('Skip BUY: market resolved/redeemable');
+                    continue;
+                }
+                if (!ctx.user_position) {
+                    await prisma.userActivities.update({
+                        where: { id: trade.id },
+                        data: { bot: true, botExcutedTime: 999 },
+                    });
+                    Logger.info('Skip BUY: trader position no longer active');
+                    continue;
+                }
+            }
 
             await postOrder(
                 clobClient,

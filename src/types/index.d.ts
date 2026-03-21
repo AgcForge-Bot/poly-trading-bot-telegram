@@ -30,9 +30,11 @@ declare global {
         NETWORK_RETRY_LIMIT: number;
         TRADE_AGGREGATION_ENABLED: boolean;
         TRADE_AGGREGATION_WINDOW_SECONDS: number;
+        MAX_PENDING_TRADE_AGE_SECONDS: number;
         MAX_SLIPPAGE_PERCENT: number;
         OWN_CUSTOM_AMOUNT_USD: number;
         TAKER_FEE_BPS: number;
+        ADAPTIVE_MIN_PERCENT: number;
         ADAPTIVE_MIN_PERCENT: number;
         ADAPTIVE_MAX_PERCENT: number;
         ADAPTIVE_THRESHOLD_USD: number;

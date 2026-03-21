@@ -19,136 +19,143 @@ jobs:
         script: |
           set -e
 
-          # Setup environment variables
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-          # Use specific Node version
-          nvm use 24 || node --version
-
-          # ==========================================
-          # INSTALL PNPM IF NOT EXISTS
-          # ==========================================
-          if ! command -v pnpm &> /dev/null; then
-            echo "📦 Installing pnpm globally..."
-            npm install -g pnpm@latest
-          else
-            echo "✅ pnpm already installed: $(pnpm --version)"
-          fi
-
-          # Go to project directory
+          # # Go to project directory
           cd /var/www/bot/poly-trading-bot-telegram
 
-          echo "========================================="
-          echo "🚀 Starting deployment..."
-          echo "========================================="
-
-          # Save current commit for rollback
-          CURRENT_COMMIT=$(git rev-parse HEAD)
-          echo "📝 Current commit: $CURRENT_COMMIT"
-
-          echo "📥 Pulling latest code..."
+          # echo "📥 Pulling latest code..."
           git fetch origin main
           git reset --hard origin/main
 
-          NEW_COMMIT=$(git rev-parse HEAD)
-          echo "📝 New commit: $NEW_COMMIT"
+          # # Setup environment variables
+          # export NVM_DIR="$HOME/.nvm"
+          # [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          # [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-          # ==========================================
-          # CLEAN INSTALL SECTION
-          # ==========================================
-          echo "🧹 Cleaning previous installation..."
+          # # Use specific Node version
+          # nvm use 24 || node --version
 
-          # Clean install dependencies
-          echo "📦 Installing dependencies with pnpm..."
+          # # ==========================================
+          # # INSTALL PNPM IF NOT EXISTS
+          # # ==========================================
+          # if ! command -v pnpm &> /dev/null; then
+          #   echo "📦 Installing pnpm globally..."
+          #   npm install -g pnpm@latest
+          # else
+          #   echo "✅ pnpm already installed: $(pnpm --version)"
+          # fi
 
-          # Remove node_modules untuk clean install
-          rm -rf node_modules
+          # # Go to project directory
+          # cd /var/www/bot/poly-trading-bot-telegram
 
-          # Install with frozen lockfile untuk memastikan konsistensi
-          if [ -f "pnpm-lock.yaml" ]; then
-            pnpm install --frozen-lockfile
-          else
-            pnpm install
-          fi
+          # echo "========================================="
+          # echo "🚀 Starting deployment..."
+          # echo "========================================="
 
-          # ==========================================
-          # BUILD SECTION
-          # ==========================================
-          echo "🔨 Building project..."
+          # # Save current commit for rollback
+          # CURRENT_COMMIT=$(git rev-parse HEAD)
+          # echo "📝 Current commit: $CURRENT_COMMIT"
 
-          # Clean previous build
-          rm -rf dist build .next 2>/dev/null || true
+          # echo "📥 Pulling latest code..."
+          # git fetch origin main
+          # git reset --hard origin/main
 
-          # Run build
-          if ! pnpm build; then
-            echo "❌ Build failed! Rolling back..."
-            git reset --hard $CURRENT_COMMIT
-            pnpm install --frozen-lockfile
-            exit 1
-          fi
+          # NEW_COMMIT=$(git rev-parse HEAD)
+          # echo "📝 New commit: $NEW_COMMIT"
 
-          # ==========================================
-          # PM2 RESTART SECTION
-          # ==========================================
-          echo "🔄 Restarting bot with PM2..."
+          # # ==========================================
+          # # CLEAN INSTALL SECTION
+          # # ==========================================
+          # echo "🧹 Cleaning previous installation..."
 
-          # Check if PM2 is installed
-          if ! command -v pm2 &> /dev/null; then
-            echo "⚠️  PM2 not found, installing globally..."
-            npm install -g pm2@latest
-          fi
+          # # Clean install dependencies
+          # echo "📦 Installing dependencies with pnpm..."
 
-          # Check if process exists
-          if pm2 list | grep -q "copy-bot-poly"; then
-            echo "✅ Found existing process, restarting..."
-            pm2 restart copy-bot-poly --update-env
-          else
-            echo "🆕 Process not found, starting new..."
-            # Adjust the entry file sesuai dengan struktur project Anda
-            if [ -f "dist/index.js" ]; then
-              pm2 start dist/index.js --name copy-bot-poly
-            elif [ -f "build/index.js" ]; then
-              pm2 start build/index.js --name copy-bot-poly
-            elif [ -f "src/index.ts" ]; then
-              pm2 start src/index.ts --name copy-bot-poly --interpreter pnpm
-            else
-              echo "❌ Cannot find entry file!"
-              exit 1
-            fi
-          fi
+          # # Remove node_modules untuk clean install
+          # rm -rf node_modules
 
-          # Save PM2 process list
-          pm2 save
+          # # Install with frozen lockfile untuk memastikan konsistensi
+          # if [ -f "pnpm-lock.yaml" ]; then
+          #   pnpm install --frozen-lockfile
+          # else
+          #   pnpm install
+          # fi
 
-          # Wait a bit and check status
-          sleep 3
+          # # ==========================================
+          # # BUILD SECTION
+          # # ==========================================
+          # echo "🔨 Building project..."
 
-          # Check if process is running
-          if pm2 list | grep -q "copy-bot-poly.*errored"; then
-            echo "❌ Process is in errored state!"
-            pm2 logs copy-bot-poly --lines 20 --nostream
-            exit 1
-          elif pm2 list | grep -q "copy-bot-poly.*online"; then
-            echo "✅ Bot restarted successfully!"
-            pm2 status copy-bot-poly
-          else
-            echo "⚠️  Unknown process state, checking logs..."
-            pm2 logs copy-bot-poly --lines 10 --nostream
-          fi
+          # # Clean previous build
+          # rm -rf dist build .next 2>/dev/null || true
 
-          # ==========================================
-          # CLEANUP
-          # ==========================================
-          echo "🧹 Cleaning up..."
+          # # Run build
+          # if ! pnpm build; then
+          #   echo "❌ Build failed! Rolling back..."
+          #   git reset --hard $CURRENT_COMMIT
+          #   pnpm install --frozen-lockfile
+          #   exit 1
+          # fi
 
-          echo "========================================="
-          echo "✅ Deployment completed successfully!"
-          echo "========================================="
+          # # ==========================================
+          # # PM2 RESTART SECTION
+          # # ==========================================
+          # echo "🔄 Restarting bot with PM2..."
 
-          # Show final status
-          pm2 list
-          echo ""
-          echo "📊 Recent logs:"
-          pm2 logs copy-bot-poly --lines 5 --nostream
+          # # Check if PM2 is installed
+          # if ! command -v pm2 &> /dev/null; then
+          #   echo "⚠️  PM2 not found, installing globally..."
+          #   npm install -g pm2@latest
+          # fi
+
+          # # Check if process exists
+          # if pm2 list | grep -q "copy-bot-poly"; then
+          #   echo "✅ Found existing process, restarting..."
+          #   pm2 restart copy-bot-poly --update-env
+          # else
+          #   echo "🆕 Process not found, starting new..."
+          #   # Adjust the entry file sesuai dengan struktur project Anda
+          #   if [ -f "dist/index.js" ]; then
+          #     pm2 start dist/index.js --name copy-bot-poly
+          #   elif [ -f "build/index.js" ]; then
+          #     pm2 start build/index.js --name copy-bot-poly
+          #   elif [ -f "src/index.ts" ]; then
+          #     pm2 start src/index.ts --name copy-bot-poly --interpreter pnpm
+          #   else
+          #     echo "❌ Cannot find entry file!"
+          #     exit 1
+          #   fi
+          # fi
+
+          # # Save PM2 process list
+          # pm2 save
+
+          # # Wait a bit and check status
+          # sleep 3
+
+          # # Check if process is running
+          # if pm2 list | grep -q "copy-bot-poly.*errored"; then
+          #   echo "❌ Process is in errored state!"
+          #   pm2 logs copy-bot-poly --lines 20 --nostream
+          #   exit 1
+          # elif pm2 list | grep -q "copy-bot-poly.*online"; then
+          #   echo "✅ Bot restarted successfully!"
+          #   pm2 status copy-bot-poly
+          # else
+          #   echo "⚠️  Unknown process state, checking logs..."
+          #   pm2 logs copy-bot-poly --lines 10 --nostream
+          # fi
+
+          # # ==========================================
+          # # CLEANUP
+          # # ==========================================
+          # echo "🧹 Cleaning up..."
+
+          # echo "========================================="
+          # echo "✅ Deployment completed successfully!"
+          # echo "========================================="
+
+          # # Show final status
+          # pm2 list
+          # echo ""
+          # echo "📊 Recent logs:"
+          # pm2 logs copy-bot-poly --lines 5 --nostream
