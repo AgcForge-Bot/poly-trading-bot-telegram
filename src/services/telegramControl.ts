@@ -7,6 +7,7 @@ import { isTradingEnabled, setTradingEnabled } from './runtimeState';
 import getMyBalance from '../utils/getMyBalance';
 import { performHealthCheck } from '../utils/healthCheck';
 import { getActiveAddresses, loadPersistedTraders } from './leaderboardScanner';
+import { clearTakerFeeCache, getTakerFeeCacheSnapshot } from '../utils/takerFeeCache';
 
 type TelegramUpdate = {
     update_id: number;
@@ -35,6 +36,7 @@ let maintenanceRunning = false;
 
 type PendingInput =
     | { type: 'user_addresses'; startedAtMs: number }
+    | { type: 'taker_fee_bps'; startedAtMs: number }
     | { type: 'none'; startedAtMs: number };
 
 const pendingByChat = new Map<number, PendingInput>();
@@ -92,6 +94,18 @@ const parseUserAddressesInput = (raw: string): string[] => {
         .filter(Boolean);
 
     return normalizeList(parts);
+};
+
+const parseTakerFeeBpsInput = (raw: string): number => {
+    const v = raw.trim().replace(/[$,%_\s]/g, '');
+    const n = Number(v);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) {
+        throw new Error('Fee harus integer (bps), contoh: 1000');
+    }
+    if (n < 0 || n > 10_000) {
+        throw new Error('Fee bps harus antara 0 sampai 10000');
+    }
+    return n;
 };
 
 const getPending = (chatId: number): PendingInput | null => {
@@ -196,9 +210,51 @@ const maintenanceMenuMarkup = (): unknown => ({
         [
             { text: 'Run Redeem', callback_data: 'run:redeem' },
         ],
+        [
+            { text: 'Taker Fee Cache', callback_data: 'fee:menu' },
+        ],
         [{ text: '⬅️ Back', callback_data: 'back:main' }],
     ],
 });
+
+const feeCacheMenuMarkup = (): unknown => ({
+    inline_keyboard: [
+        [
+            { text: 'View Cache', callback_data: 'fee:view' },
+            { text: 'Clear Cache', callback_data: 'fee:clear' },
+        ],
+        [
+            { text: 'Set Default Fee', callback_data: 'fee:set:menu' },
+        ],
+        [{ text: '⬅️ Back', callback_data: 'maint' }],
+    ],
+});
+
+const feeDefaultMenuMarkup = (current: number): unknown => ({
+    inline_keyboard: [
+        [
+            { text: current === 0 ? '✅ 0' : '0', callback_data: 'fee:set:0' },
+            { text: current === 100 ? '✅ 100' : '100', callback_data: 'fee:set:100' },
+            { text: current === 300 ? '✅ 300' : '300', callback_data: 'fee:set:300' },
+            { text: current === 1000 ? '✅ 1000' : '1000', callback_data: 'fee:set:1000' },
+        ],
+        [
+            { text: 'Manual…', callback_data: 'fee:set:manual' },
+        ],
+        [{ text: '⬅️ Back', callback_data: 'fee:menu' }],
+    ],
+});
+
+const feeCacheText = async (): Promise<string> => {
+    const cfg = await getSetupConfig();
+    const rows = await getTakerFeeCacheSnapshot();
+    const header = `<b>Taker Fee Cache</b>\nDefault: <b>${esc(String(cfg.TAKER_FEE_BPS))}</b> bps\n`;
+    if (rows.length === 0) return `${header}<i>(empty)</i>`;
+    const lines = rows
+        .map((r, i) => `${i + 1}. <code>${esc(r.tokenId)}</code> — <b>${esc(String(r.feeBps))}</b> bps`)
+        .join('\n');
+    return `${header}${lines}`;
+};
 
 const configMenuMarkup = (cfg: SetupConfig): unknown => {
     const rows: unknown[] = [
@@ -547,6 +603,43 @@ const handleCommand = async (chatId: number, text: string): Promise<void> => {
             }
         }
     }
+
+    if (pending?.type === 'taker_fee_bps') {
+        if (trimmed === '/cancel') {
+            pendingByChat.delete(chatId);
+            await send(chatId, '✅ Dibatalkan.');
+            return;
+        }
+
+        if (trimmed.startsWith('/')) {
+            pendingByChat.delete(chatId);
+        } else {
+            const cfg = await getSetupConfig();
+            if (!cfg.TELEGRAM_PM2_CONTROL_ENABLED || !isPm2Authorized(chatId, cfg)) {
+                pendingByChat.delete(chatId);
+                const pinHint = (cfg.TELEGRAM_PM2_PIN ?? '').trim()
+                    ? 'Gunakan <code>/auth PIN</code> dulu.'
+                    : 'Pastikan chat ID ada di whitelist admin.';
+                await send(chatId, `❌ Tidak punya akses set fee. ${pinHint}`);
+                return;
+            }
+
+            try {
+                const fee = parseTakerFeeBpsInput(trimmed);
+                await updateByKey('TAKER_FEE_BPS', String(fee));
+                pendingByChat.delete(chatId);
+                await send(chatId, `✅ TAKER_FEE_BPS di-update: <b>${esc(String(fee))}</b> bps.`);
+                return;
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                await send(
+                    chatId,
+                    `❌ Gagal parse fee: <code>${esc(msg)}</code>\n\nKirim ulang angka bps, atau <code>/cancel</code>.`
+                );
+                return;
+            }
+        }
+    }
     if (trimmed === '/start' || trimmed === '/menu') {
         const cfg = await getSetupConfig();
         await send(
@@ -610,6 +703,11 @@ const handleCommand = async (chatId: number, text: string): Promise<void> => {
 
     if (trimmed === '/maintenance') {
         await send(chatId, '<b>Maintenance</b>', maintenanceMenuMarkup());
+        return;
+    }
+
+    if (trimmed === '/fee-cache') {
+        await send(chatId, await feeCacheText(), feeCacheMenuMarkup());
         return;
     }
 
@@ -782,6 +880,66 @@ const handleCallback = async (
     if (data === 'maint') {
         await answerCallback(callbackId);
         await edit(chatId, messageId, '<b>Maintenance</b>', maintenanceMenuMarkup());
+        return;
+    }
+
+    if (data === 'fee:menu') {
+        await answerCallback(callbackId);
+        await edit(chatId, messageId, '<b>Taker Fee Cache</b>', feeCacheMenuMarkup());
+        return;
+    }
+
+    if (data === 'fee:set:menu') {
+        await answerCallback(callbackId);
+        const cfg = await getSetupConfig();
+        await edit(chatId, messageId, '<b>Set Default Taker Fee (bps)</b>', feeDefaultMenuMarkup(cfg.TAKER_FEE_BPS));
+        return;
+    }
+
+    if (data.startsWith('fee:set:')) {
+        await answerCallback(callbackId);
+        const action = data.split(':')[2] as string;
+        const cfg = await getSetupConfig();
+        if (!cfg.TELEGRAM_PM2_CONTROL_ENABLED || !isPm2Authorized(chatId, cfg)) {
+            const pinHint = (cfg.TELEGRAM_PM2_PIN ?? '').trim()
+                ? 'Gunakan <code>/auth PIN</code> dulu.'
+                : 'Pastikan chat ID ada di whitelist admin.';
+            await send(chatId, `❌ Tidak punya akses set fee. ${pinHint}`);
+            return;
+        }
+
+        if (action === 'manual') {
+            pendingByChat.set(chatId, { type: 'taker_fee_bps', startedAtMs: Date.now() });
+            await send(
+                chatId,
+                `<b>Set Default Taker Fee</b>\nKirim angka fee dalam bps.\nContoh: <code>1000</code> (10%)\n\nKetik <code>/cancel</code> untuk batal.`
+            );
+            return;
+        }
+
+        const fee = parseTakerFeeBpsInput(action);
+        await updateByKey('TAKER_FEE_BPS', String(fee));
+        const next = await getSetupConfig();
+        await edit(chatId, messageId, `✅ TAKER_FEE_BPS set to <b>${esc(String(fee))}</b> bps.`, feeDefaultMenuMarkup(next.TAKER_FEE_BPS));
+        return;
+    }
+
+    if (data === 'fee:view') {
+        await answerCallback(callbackId);
+        await edit(chatId, messageId, await feeCacheText(), feeCacheMenuMarkup());
+        return;
+    }
+
+    if (data === 'fee:clear') {
+        await answerCallback(callbackId);
+        const cfg = await getSetupConfig();
+        if (!cfg.TELEGRAM_PM2_CONTROL_ENABLED || !isPm2Authorized(chatId, cfg)) {
+            const pinHint = (cfg.TELEGRAM_PM2_PIN ?? '').trim() ? 'Gunakan <code>/auth PIN</code> dulu.' : 'Pastikan chat ID ada di whitelist admin.';
+            await send(chatId, `❌ Tidak punya akses clear cache. ${pinHint}`);
+            return;
+        }
+        await clearTakerFeeCache();
+        await edit(chatId, messageId, '✅ Taker fee cache cleared.', feeCacheMenuMarkup());
         return;
     }
 

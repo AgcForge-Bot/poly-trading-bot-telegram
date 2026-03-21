@@ -4,6 +4,7 @@ import * as path from 'path';
 import { ENV } from '../config/env';
 import createClobClient from '../utils/createClobClient';
 import fetchData from '../utils/fetchData';
+import { getCachedTakerFeeBps, setCachedTakerFeeBps } from '../utils/takerFeeCache';
 
 const PROXY_WALLET = ENV.PROXY_WALLET;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
@@ -100,6 +101,14 @@ const isFundsError = (msg: string | undefined): boolean => {
     return l.includes('not enough balance') || l.includes('allowance');
 };
 
+const extractRequiredTakerFeeBps = (msg: string | undefined): number | null => {
+    if (!msg) return null;
+    const m = msg.match(/taker fee:\s*(\d+)/i);
+    if (!m?.[1]) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+};
+
 const updatePolymarketCache = async (clobClient: ClobClient, tokenId: string): Promise<void> => {
     try {
         await clobClient.updateBalanceAllowance({
@@ -121,6 +130,7 @@ const sellEntirePosition = async (
     let attempts = 0;
     let soldTokens = 0;
     let proceeds = 0;
+    let feeRateBps = await getCachedTakerFeeBps(position.asset, TAKER_FEE_BPS);
 
     if (remaining < MIN_SELL_TOKENS) {
         console.log(`   ❌ Position ${remaining.toFixed(4)} < ${MIN_SELL_TOKENS} minimum — skipping`);
@@ -162,7 +172,7 @@ const sellEntirePosition = async (
                 tokenID: position.asset,
                 amount: sellAmount,
                 price: bidPrice,
-                feeRateBps: TAKER_FEE_BPS,
+                feeRateBps,
             } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
@@ -175,6 +185,13 @@ const sellEntirePosition = async (
                 console.log(`   ✅ Sold ${sellAmount.toFixed(2)} @ $${bidPrice.toFixed(3)} ≈ $${value.toFixed(2)}`);
             } else {
                 const errMsg = extractOrderError(resp);
+                const requiredFee = extractRequiredTakerFeeBps(errMsg);
+                if (requiredFee !== null && requiredFee !== feeRateBps) {
+                    feeRateBps = requiredFee;
+                    await setCachedTakerFeeBps(position.asset, requiredFee);
+                    console.log(`   ℹ️  Updated taker fee: ${requiredFee} bps`);
+                    continue;
+                }
                 if (isFundsError(errMsg)) {
                     console.log(`   ❌ Rejected: ${errMsg}`);
                     break;

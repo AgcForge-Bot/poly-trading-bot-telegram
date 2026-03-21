@@ -2,6 +2,7 @@ import { AssetType, type ClobClient, OrderType, Side } from '@polymarket/clob-cl
 import { ENV } from '../config/env';
 import createClobClient from '../utils/createClobClient';
 import fetchData from '../utils/fetchData';
+import { getCachedTakerFeeBps, setCachedTakerFeeBps } from '../utils/takerFeeCache';
 
 const PROXY_WALLET = ENV.PROXY_WALLET;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
@@ -81,6 +82,14 @@ const isInsufficientBalanceOrAllowanceError = (message: string | undefined): boo
     return lower.includes('not enough balance') || lower.includes('allowance');
 };
 
+const extractRequiredTakerFeeBps = (msg: string | undefined): number | null => {
+    if (!msg) return null;
+    const m = msg.match(/taker fee:\s*(\d+)/i);
+    if (!m?.[1]) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+};
+
 const updatePolymarketCache = async (clobClient: ClobClient, tokenId: string) => {
     try {
         await clobClient.updateBalanceAllowance({
@@ -100,6 +109,7 @@ const sellEntirePosition = async (
     let attempts = 0;
     let soldTokens = 0;
     let proceedsUsd = 0;
+    let feeRateBps = await getCachedTakerFeeBps(position.asset, TAKER_FEE_BPS);
 
     if (remaining < MIN_SELL_TOKENS) {
         console.log(
@@ -148,7 +158,7 @@ const sellEntirePosition = async (
         };
 
         try {
-            const signedOrder = await clobClient.createMarketOrder(orderArgs as any);
+            const signedOrder = await clobClient.createMarketOrder({ ...orderArgs, feeRateBps } as any);
             const resp = await clobClient.postOrder(signedOrder, OrderType.FOK);
 
             if (resp.success === true) {
@@ -163,6 +173,14 @@ const sellEntirePosition = async (
             } else {
                 attempts += 1;
                 const errorMessage = extractOrderError(resp);
+                const requiredFee = extractRequiredTakerFeeBps(errorMessage);
+                if (requiredFee !== null && requiredFee !== feeRateBps) {
+                    feeRateBps = requiredFee;
+                    attempts -= 1;
+                    await setCachedTakerFeeBps(position.asset, requiredFee);
+                    console.log(`   ℹ️  Updated taker fee: ${requiredFee} bps`);
+                    continue;
+                }
 
                 if (isInsufficientBalanceOrAllowanceError(errorMessage)) {
                     console.log(

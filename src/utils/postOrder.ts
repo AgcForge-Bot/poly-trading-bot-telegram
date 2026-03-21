@@ -4,6 +4,7 @@ import type { UserPositions, UserActivities } from '../types/prisma/client';
 import { prisma } from '../lib/prisma';
 import Logger from './logger';
 import { calculateOrderSize, getTradeMultiplier } from '../config/copyStrategy';
+import { getCachedTakerFeeBps, setCachedTakerFeeBps } from './takerFeeCache';
 import {
     notifyOrderFilled,
     notifyOrderFailed,
@@ -44,6 +45,16 @@ const isFundsError = (msg: string | undefined): boolean => {
     if (!msg) return false;
     const l = msg.toLowerCase();
     return l.includes('not enough balance') || l.includes('allowance');
+};
+
+const feeBpsCache = new Map<string, number>();
+
+const extractRequiredTakerFeeBps = (msg: string | undefined): number | null => {
+    if (!msg) return null;
+    const m = msg.match(/taker fee:\s*(\d+)/i);
+    if (!m?.[1]) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
 };
 
 // ─── postOrder ────────────────────────────────────────────────────────────────
@@ -89,6 +100,7 @@ const postOrder = async (
 
         let retry = 0,
             abortDueToFunds = false;
+        let feeRateBps = feeBpsCache.get(tokenId) ?? (await getCachedTakerFeeBps(tokenId, TAKER_FEE_BPS));
 
         while (remaining > 0 && retry < RETRY_LIMIT) {
             let orderBook;
@@ -131,7 +143,7 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: sellAmt,
                 price: bidPrice,
-                feeRateBps: TAKER_FEE_BPS,
+                feeRateBps,
             } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
@@ -152,6 +164,14 @@ const postOrder = async (
                 });
             } else {
                 const errMsg = extractOrderError(resp);
+                const requiredFee = extractRequiredTakerFeeBps(errMsg);
+                if (requiredFee !== null && requiredFee !== feeRateBps) {
+                    feeRateBps = requiredFee;
+                    feeBpsCache.set(tokenId, requiredFee);
+                    await setCachedTakerFeeBps(tokenId, requiredFee);
+                    Logger.info(`Updated taker fee for ${tokenId}: ${requiredFee} bps`);
+                    continue;
+                }
                 if (isFundsError(errMsg)) {
                     abortDueToFunds = true;
                     notifyInsufficientFunds(my_balance, sellAmt * bidPrice, marketTitle);
@@ -213,11 +233,12 @@ const postOrder = async (
             String((COPY_STRATEGY_CONFIG as unknown as { strategy?: unknown })?.strategy) === 'OWN_CUSTOM';
 
         let remaining = isOwnCustom
-                ? Math.min(orderCalc.finalAmount, OWN_CUSTOM_AMOUNT_USD)
-                : orderCalc.finalAmount,
+            ? Math.min(orderCalc.finalAmount, OWN_CUSTOM_AMOUNT_USD)
+            : orderCalc.finalAmount,
             retry = 0;
         let abortDueToFunds = false,
             totalBoughtTokens = 0;
+        let feeRateBps = feeBpsCache.get(tokenId) ?? (await getCachedTakerFeeBps(tokenId, TAKER_FEE_BPS));
 
         while (remaining > 0 && retry < RETRY_LIMIT) {
             let orderBook;
@@ -305,7 +326,7 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: orderUSD,
                 price: askPrice,
-                feeRateBps: TAKER_FEE_BPS,
+                feeRateBps,
             } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
@@ -332,6 +353,14 @@ const postOrder = async (
                 });
             } else {
                 const errMsg = extractOrderError(resp);
+                const requiredFee = extractRequiredTakerFeeBps(errMsg);
+                if (requiredFee !== null && requiredFee !== feeRateBps) {
+                    feeRateBps = requiredFee;
+                    feeBpsCache.set(tokenId, requiredFee);
+                    await setCachedTakerFeeBps(tokenId, requiredFee);
+                    Logger.info(`Updated taker fee for ${tokenId}: ${requiredFee} bps`);
+                    continue;
+                }
                 if (isFundsError(errMsg)) {
                     abortDueToFunds = true;
                     // ── Notification: insufficient funds ──
@@ -423,6 +452,7 @@ const postOrder = async (
             abortDueToFunds = false;
         let totalSoldTokens = 0,
             weightedSumSellPrice = 0;
+        let feeRateBps = feeBpsCache.get(tokenId) ?? (await getCachedTakerFeeBps(tokenId, TAKER_FEE_BPS));
 
         while (remaining > 0 && retry < RETRY_LIMIT) {
             let orderBook;
@@ -472,7 +502,7 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: sellAmt,
                 price: bidPrice,
-                feeRateBps: TAKER_FEE_BPS,
+                feeRateBps,
             } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
@@ -496,6 +526,14 @@ const postOrder = async (
                 });
             } else {
                 const errMsg = extractOrderError(resp);
+                const requiredFee = extractRequiredTakerFeeBps(errMsg);
+                if (requiredFee !== null && requiredFee !== feeRateBps) {
+                    feeRateBps = requiredFee;
+                    feeBpsCache.set(tokenId, requiredFee);
+                    await setCachedTakerFeeBps(tokenId, requiredFee);
+                    Logger.info(`Updated taker fee for ${tokenId}: ${requiredFee} bps`);
+                    continue;
+                }
                 if (isFundsError(errMsg)) {
                     abortDueToFunds = true;
                     notifyInsufficientFunds(0, 0, marketTitle);

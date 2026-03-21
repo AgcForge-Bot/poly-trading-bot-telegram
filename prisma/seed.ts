@@ -41,6 +41,7 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     TELEGRAM_CHAT_ID_CONTROL: "",
     TRADING_ENABLED: "true",
     PM2_PROCESS_NAME: "copy-bot-poly",
+    TAKER_FEE_CACHE: "{}",
 };
 
 const CONFIG_KEYS: string[] = [
@@ -95,6 +96,7 @@ const CONFIG_KEYS: string[] = [
     "TELEGRAM_CHAT_ID_CONTROL",
     "TRADING_ENABLED",
     "PM2_PROCESS_NAME",
+    "TAKER_FEE_CACHE",
 ];
 
 const getSeedValue = (key: string): string | undefined => {
