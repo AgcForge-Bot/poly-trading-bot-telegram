@@ -7,6 +7,7 @@ import fetchData from '../utils/fetchData';
 
 const PROXY_WALLET = ENV.PROXY_WALLET;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
+const TAKER_FEE_BPS = ENV.TAKER_FEE_BPS;
 
 const MIN_SELL_TOKENS = 1.0;
 const ZERO_THRESHOLD = 0.0001;
@@ -161,7 +162,8 @@ const sellEntirePosition = async (
                 tokenID: position.asset,
                 amount: sellAmount,
                 price: bidPrice,
-            });
+                feeRateBps: TAKER_FEE_BPS,
+            } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
             if (resp.success) {

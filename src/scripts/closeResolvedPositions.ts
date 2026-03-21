@@ -5,6 +5,7 @@ import fetchData from '../utils/fetchData';
 
 const PROXY_WALLET = ENV.PROXY_WALLET;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
+const TAKER_FEE_BPS = ENV.TAKER_FEE_BPS;
 
 // Polymarket enforces a 1 token minimum on sell orders
 const MIN_SELL_TOKENS = 1.0;
@@ -143,10 +144,11 @@ const sellEntirePosition = async (
             tokenID: position.asset,
             amount: sellAmount,
             price: bidPrice,
+            feeRateBps: TAKER_FEE_BPS,
         };
 
         try {
-            const signedOrder = await clobClient.createMarketOrder(orderArgs);
+            const signedOrder = await clobClient.createMarketOrder(orderArgs as any);
             const resp = await clobClient.postOrder(signedOrder, OrderType.FOK);
 
             if (resp.success === true) {

@@ -23,6 +23,7 @@ const CONFIG_DEFAULTS: Record<string, string> = {
     TRADE_AGGREGATION_WINDOW_SECONDS: '300',
     MAX_SLIPPAGE_PERCENT: '15',
     OWN_CUSTOM_AMOUNT_USD: '1.0',
+    TAKER_FEE_BPS: '0',
     ADAPTIVE_MIN_PERCENT: '5.0',
     ADAPTIVE_MAX_PERCENT: '20.0',
     ADAPTIVE_THRESHOLD_USD: '500.0',
@@ -233,6 +234,7 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
     const userAddresses = parseUserAddresses(getCfg(m, 'USER_ADDRESSES'));
     const maxSlippagePercent = parseNumber(getCfg(m, 'MAX_SLIPPAGE_PERCENT'), 15) / 100;
     const ownCustomAmountUSD = parseNumber(getCfg(m, 'OWN_CUSTOM_AMOUNT_USD'), 1.0);
+    const takerFeeBps = parseIntSafe(getCfg(m, 'TAKER_FEE_BPS'), 0);
     const adaptiveMin = parseNumber(getCfg(m, 'ADAPTIVE_MIN_PERCENT'), 5.0);
     const adaptiveMax = parseNumber(getCfg(m, 'ADAPTIVE_MAX_PERCENT'), 20.0);
     const adaptiveThreshold = parseNumber(getCfg(m, 'ADAPTIVE_THRESHOLD_USD'), 500.0);
@@ -271,6 +273,7 @@ export const getSetupConfig = async (): Promise<SetupConfig> => {
         TRADE_AGGREGATION_WINDOW_SECONDS: parseIntSafe(getCfg(m, 'TRADE_AGGREGATION_WINDOW_SECONDS'), 300),
         MAX_SLIPPAGE_PERCENT: maxSlippagePercent,
         OWN_CUSTOM_AMOUNT_USD: ownCustomAmountUSD,
+        TAKER_FEE_BPS: takerFeeBps,
         ADAPTIVE_MIN_PERCENT: adaptiveMin,
         ADAPTIVE_MAX_PERCENT: adaptiveMax,
         ADAPTIVE_THRESHOLD_USD: adaptiveThreshold,

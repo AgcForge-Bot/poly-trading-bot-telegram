@@ -17,6 +17,7 @@ const RETRY_LIMIT = ENV.RETRY_LIMIT;
 const COPY_STRATEGY_CONFIG = ENV.COPY_STRATEGY_CONFIG;
 const MAX_SLIPPAGE_PERCENT = ENV.MAX_SLIPPAGE_PERCENT;
 const OWN_CUSTOM_AMOUNT_USD = ENV.OWN_CUSTOM_AMOUNT_USD;
+const TAKER_FEE_BPS = ENV.TAKER_FEE_BPS;
 
 const MIN_ORDER_USD_SIZE = 1.0;
 const MIN_ORDER_TOKEN_SIZE = 1.0;
@@ -130,7 +131,8 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: sellAmt,
                 price: bidPrice,
-            });
+                feeRateBps: TAKER_FEE_BPS,
+            } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
             if (resp.success) {
@@ -303,7 +305,8 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: orderUSD,
                 price: askPrice,
-            });
+                feeRateBps: TAKER_FEE_BPS,
+            } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
             if (resp.success) {
@@ -469,7 +472,8 @@ const postOrder = async (
                 tokenID: tokenId,
                 amount: sellAmt,
                 price: bidPrice,
-            });
+                feeRateBps: TAKER_FEE_BPS,
+            } as any);
             const resp = await clobClient.postOrder(signed, OrderType.FOK);
 
             if (resp.success) {
